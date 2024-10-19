@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from api import models, schemas
+from api.supplies_service import models, schemas
 from sqlalchemy import select, join
 
 

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.crud.shelter import get_shelters, get_shelter, create_shelter, update_shelter, delete_shelter
-from api import schemas
+from api.shelter_service.crud import get_shelters, get_shelter, create_shelter, update_shelter, delete_shelter
+from api.shelter_service import schemas
 from api.database import get_db
 
 # Shelterエンドポイントに関連するルーターを定義

@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List  # ここを追加
-from api.crud.ble_device import create_device_data as crud_create_device_data, get_ble_device as get_device_data_by_id, get_ble_devices
-from api import schemas
+from api.ble_device_service.crud import create_device_data as crud_create_device_data, get_ble_device as get_device_data_by_id, get_ble_devices
+from api.ble_device_service import schemas
 from api.database import get_db
 
 # APIRouterを初期化し、エンドポイントに関する設定を行う

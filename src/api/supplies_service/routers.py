@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.crud.material import get_materials, get_material, create_material, update_material, delete_material, get_material_details
-from api import schemas
+from api.supplies_service.crud import get_materials, get_material, create_material, update_material, delete_material, get_material_details
+from api.supplies_service import schemas
 from api.database import get_db
 
 # Materialエンドポイントに関連するルーターを定義

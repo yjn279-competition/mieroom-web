@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from api import models, schemas
+from api.shelter_service import models, schemas
 
 def get_shelters(db: Session, skip: int = 0, limit: int = 10):
     """複数の避難所を取得する関数
