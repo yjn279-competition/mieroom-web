@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from api.crud.evacuee import create_evacuee as crud_create_evacuee, get_evacuees, get_evacuee, get_evacuee_details
-from api import schemas
+from api.evacuee_service.crud import create_evacuee as crud_create_evacuee, get_evacuee_details, get_evacuee, get_evacuees
+from api.evacuee_service import crud, schemas  # 修正: api.evacuee から schemas をインポート
 from api.database import get_db
 
 # APIRouterを初期化し、エンドポイントに関する設定を行う

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from api import models, schemas
+from api.evacuee_service import schemas  # 修正: api.evacuee から schemas をインポート
+from api.evacuee_service import models  # models をインポート
 from sqlalchemy import text
 from fastapi.encoders import jsonable_encoder
 
@@ -14,7 +15,7 @@ def get_evacuee_details(db: Session):
             shelter.name AS shelter_name,
             shelter.address AS shelter_address
         FROM
-            evacuee_table AS evacuee
+            evacuees AS evacuee
             INNER JOIN my_number_card AS card ON evacuee.evacuee_id = card.card_number
             INNER JOIN shelter_table AS shelter ON evacuee.shelter_code = shelter.shelter_code;
     """)

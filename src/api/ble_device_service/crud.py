@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from api import models, schemas
+from api.ble_device_service import models, schemas
 
 # 複数のBLEデバイスデータを取得します
 def get_ble_devices(db: Session, skip: int = 0, limit: int = 10):
