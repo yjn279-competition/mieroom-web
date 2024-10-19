@@ -2,160 +2,231 @@
 
 import { useState } from 'react';
 
-const Receiver = () => {
-    const [deviceID, setDeviceID] = useState<string | null>(null);
-    const [allDeviceInfo, setAllDeviceInfo] = useState<any[]>([]); // 取得したすべてのデバイス情報を保持
-    const [showModal, setShowModal] = useState(false); // モーダル表示制御
+const Dashboard = () => {
+    const [allDeviceInfo, setAllDeviceInfo] = useState<any[]>([]);
+    const [latestInfo, setLatestInfo] = useState<any | null>(null);
+    const [isSent, setIsSent] = useState(false);  // 送信状態を管理
 
+    const generateRandomMyNumberID = () => {
+        const firstDigit = Math.floor(Math.random() * 9) + 1; 
+        const remainingDigits = Array.from({ length: 11 }, () => Math.floor(Math.random() * 10)).join('');
+        return `${firstDigit}${remainingDigits}`;
+    };
+    
+    const generateRandomFamilyIDs = (count) => {
+        const familyIDs = [];
+        for (let i = 0; i < count; i++) {
+            familyIDs.push(generateRandomMyNumberID()); // 生成したIDを追加
+        }
+        return familyIDs;
+    };
+    
     const handleClick = async () => {
-        const mockID = "test_device_id_12345";
-        const mockData = "battery_level:85%";
-
-        setDeviceID(mockID);
-
+        const mockMyNumberID = generateRandomMyNumberID();  // ランダムなマイナンバーIDを生成
+        const mockFullName = "赤司ひかる";  
+        const mockBirthDate = "1990-01-01";  
+        const mockGender = "M";  
+        const mockFamilyIDs = generateRandomFamilyIDs(2);  // 2つのランダムな家族マイナンバーIDを生成
+    
         try {
-            // POSTリクエストでデータを送信
             const postResponse = await fetch('http://localhost:8000/ble/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    device_id: mockID,
-                    data: mockData,
+                    my_number_id: mockMyNumberID,
+                    full_name: mockFullName,
+                    birth_date: mockBirthDate,
+                    gender: mockGender,
+                    family_my_number_ids: mockFamilyIDs,
                 }),
             });
-
+    
             if (!postResponse.ok) {
                 throw new Error('サーバーエラー: ' + postResponse.statusText);
             }
-
-            // POST送信後にGETリクエストですべてのデバイス情報を取得
+    
             const getResponse = await fetch('http://localhost:8000/ble/');
             if (!getResponse.ok) {
                 throw new Error('GETリクエストエラー: ' + getResponse.statusText);
             }
             const data = await getResponse.json();
-            setAllDeviceInfo(data); // 取得した情報を保存
-            setShowModal(true);  // モーダルを表示
+            console.log('GET Response Data:', data);
+
+            setAllDeviceInfo(data);  
+            setLatestInfo(data[0]);  
+            setIsSent(true);  // 送信後に画面を切り替える
         } catch (error) {
             console.error('エラー:', error);
         }
     };
 
-    // モーダルを閉じる処理
-    const closeModal = () => {
-        setShowModal(false);
+    const handleReset = () => {
+        setIsSent(false);
+        setLatestInfo(null);
+        setAllDeviceInfo([]);
     };
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.heading}>仮データ受信</h1>
-            <div id="idDisplay" style={styles.idDisplay}>
-                {deviceID ? `受信したID: ${deviceID}` : 'IDを待機中...'}
-            </div>
-            <button
-                id="connectButton"
-                style={styles.connectButton}
-                onClick={handleClick}
-            >
-                仮のBLEデータを送信
-            </button>
+        <div style={styles.dashboard}>
+            {/* 最初の画面 */}
+            {!isSent && (
+                <div style={styles.initialScreen}>
+                    <button style={styles.largeButton} onClick={handleClick}>
+                        BLEデータを送信
+                    </button>
+                </div>
+            )}
 
-            {/* モーダルウィンドウ */}
-            {showModal && (
-                <div style={styles.modal}>
-                    <div style={styles.modalContent}>
-                        <h2>すべてのデバイス情報</h2>
-                        {allDeviceInfo.length > 0 ? (
-                            <div>
-                                <ul>
-                                    {allDeviceInfo.map((device, index) => (
-                                        <li key={index}>
-                                            <p>ID: {device.device_id}</p>
-                                            <p>データ: {device.data}</p>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ) : (
-                            <p>デバイス情報を読み込み中...</p>
-                        )}
-                        <button onClick={closeModal} style={styles.closeButton}>閉じる</button>
+            {/* データ送信後の画面 */}
+            {isSent && (
+                <div style={styles.content}>
+                    <div style={styles.header}>
+                        <h1 style={styles.blueText}>みえるーむ</h1>
+                        <p style={styles.blueText}>{new Date().toLocaleString()}</p>
                     </div>
+
+                    <div style={styles.gridContainer}>
+                        {/* 最新チェックイン */}
+                        {latestInfo && (
+                            <div style={styles.latestCheckin}>
+                                <h2 style={styles.blueText}>最新チェックイン</h2>
+                                <div style={styles.card}>
+                                    <p><strong>{latestInfo.full_name}</strong></p>
+                                    <p>年齢: {new Date().getFullYear() - new Date(latestInfo.birth_date).getFullYear()}歳</p>
+                                    <p>チェックイン時間: {new Date().toLocaleString()}</p>
+                                    <p>性別: {latestInfo.gender}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 避難所統計 */}
+                        <div style={styles.statistics}>
+                            <h2 style={styles.blueText}>避難所統計</h2>
+                            <p>総避難者数: {allDeviceInfo.length}</p>
+                            <p>要配慮者数: 2</p>
+                        </div>
+
+                        {/* チェックイン履歴 */}
+                        <div style={styles.history}>
+                            <h2 style={styles.blueText}>チェックイン履歴</h2>
+                            <ul>
+                                {allDeviceInfo.map((device, index) => (
+                                    <li key={index} style={styles.historyItem}>
+                                        <p>{device.full_name}</p>
+                                        <p>{new Date().getFullYear() - new Date(device.birth_date).getFullYear()}歳</p>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+
+                    <button style={styles.completeButton} onClick={handleReset}>
+                        完了
+                    </button>
                 </div>
             )}
         </div>
     );
 };
 
-export default Receiver;
+export default Dashboard;
 
 // スタイルをオブジェクトとして定義
 const styles = {
-    container: {
-        backgroundColor: '#f0f4f8',
+    dashboard: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100vh',
-        margin: 0,
-        padding: 0,
-    },
-    heading: {
-        fontSize: '2rem',
-        color: '#333',
-    },
-    idDisplay: {
-        marginTop: '20px',
-        padding: '15px',
-        fontSize: '1.5rem',
-        color: '#007acc',
-        border: '1px solid #007acc',
-        borderRadius: '8px',
-        backgroundColor: '#e6f2ff',
-        width: '80%',
-        textAlign: 'center',
-    },
-    connectButton: {
-        marginTop: '30px',
-        padding: '10px 20px',
-        fontSize: '1.2rem',
-        color: '#fff',
-        backgroundColor: '#007acc',
-        border: 'none',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s ease',
-    },
-    modal: {
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        color: '#007acc',
-        height: '100%',
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    modalContent: {
-        backgroundColor: '#fff',
         padding: '20px',
-        borderRadius: '8px',
-        textAlign: 'center',
-        maxWidth: '500px',
-        width: '100%',
+        fontFamily: 'Arial, sans-serif',
+        backgroundColor: '#f0f4f8',
+        minHeight: '100vh',
     },
-    closeButton: {
-        marginTop: '20px',
-        padding: '10px 20px',
+    initialScreen: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',  // 画面中央に配置
+    },
+    largeButton: {
+        padding: '20px 40px',
+        fontSize: '2rem',
         backgroundColor: '#007acc',
         color: '#fff',
+        borderRadius: '12px',
         border: 'none',
-        borderRadius: '8px',
         cursor: 'pointer',
+    },
+    header: {
+        textAlign: 'center',
+        marginBottom: '20px',
+    },
+    blueText: {
+        color: '#007acc',  // 青色
+    },
+    content: {
+        width: '100%',
+        maxWidth: '1200px',
+        padding: '20px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',  // 横方向に中央揃え
+        justifyContent: 'center',  // 縦方向に中央揃え
+    },
+    gridContainer: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',  // 3つのカラムでレイアウト
+        gap: '20px',
+        marginTop: '20px',
+        width: '100%',  // グリッドを全幅に広げる
+    },
+    latestCheckin: {
+        gridColumn: 'span 2',  // 2カラム分を占有
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        padding: '20px',
+        color: '#333',  // 文字色を濃いグレーに変更
+    },
+    statistics: {
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        padding: '20px',
+        color: '#333',  // 文字色を濃いグレーに変更
+    },
+    history: {
+        gridColumn: 'span 3',  // 3カラム分を占有
+        backgroundColor: '#fff',
+        borderRadius: '8px',
+        padding: '20px',
+        marginTop: '20px',
+        color: '#333',  // 文字色を濃いグレーに変更
+    },
+    card: {
+        padding: '15px',
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        backgroundColor: '#f9f9f9',
+        color: '#333',  // 文字色を濃いグレーに変更
+    },
+    historyItem: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        padding: '10px',
+        borderBottom: '1px solid #ccc',
+        color: '#333',  // 文字色を濃いグレーに変更
+    },
+    completeButton: {
+        marginTop: '30px',
+        padding: '15px 30px',
+        fontSize: '1.5rem',
+        backgroundColor: '#007acc',
+        color: '#fff',
+        borderRadius: '12px',
+        border: 'none',
+        cursor: 'pointer',
+        alignSelf: 'center',  // 自分自身を中央に配置
     },
 };
