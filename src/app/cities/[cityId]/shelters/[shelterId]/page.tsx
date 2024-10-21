@@ -1,15 +1,13 @@
-'use client'
+"use client"
 
-import React, { useState } from 'react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { useState } from "react"
 import { OccupancyChart} from "@/app/cities/[cityId]/shelters/[shelterId]/components/PieChart"
+import { OutTable } from "@/app/cities/[cityId]/shelters/[shelterId]/components/Table"
+import { SuppliesChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/RadarChart"
 import { StatusChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/StatusChart"
 import { SuppliesChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/SuppliesChart"
 
+<<<<<<< HEAD
 // Mock data - replace with actual data in production
 const shelterData = {
   capacity: 1000,
@@ -113,18 +111,24 @@ const OutTable = () => {
   )
 }
 
+=======
+>>>>>>> 177e3b4194b0b2275024643742279828099b95cd
 export default function Dashboard() {
+  const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">避難所管理ダッシュボード</h1>
-      <div className="grid grid-cols-3 gap-4 h-[calc(100vh-100px)]">
-        <div className="col-span-1 space-y-4">
-          <OccupancyChart />
-          <SuppliesChart />
-        </div>
-        <div className="col-span-2 space-y-4">
+      <div className="flex flex-row gap-4">
+        <div className="flex flex-col basis-8/12 gap-4">
+          <div className="flex flex-row gap-4">
+            <OccupancyChart setGender={setGender} />
+            <SuppliesChart />
+          </div>
           <StatusChart />
-          <OutTable />
+        </div>
+        <div className="basis-4/12">
+          <OutTable gender={gender} />
         </div>
       </div>
     </div>
