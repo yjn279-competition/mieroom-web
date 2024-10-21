@@ -1,5 +1,8 @@
 from fastapi import FastAPI
-from api.routers import evacuees, materials, material_details, shelters
+from api.evacuee_service import routers as evacuee_routers
+from api.shelter_service import routers as shelter_routers
+from api.supplies_service import routers as supplies_routers
+from api.ble_device_service import routers as ble_device_routers
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -14,10 +17,10 @@ app.add_middleware(
     allow_headers=["*"],  # 許可するHTTPヘッダー
 )
 
-app.include_router(evacuees.router)
-app.include_router(materials.router)
-app.include_router(material_details.router)
-app.include_router(shelters.router)
+app.include_router(evacuee_routers.router)
+app.include_router(shelter_routers.router)
+app.include_router(supplies_routers.router)
+app.include_router(ble_device_routers.router)  # ble ルーターを FastAPI アプリケーションに登録
 
 @app.get("/")
 def read_root():

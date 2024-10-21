@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from api import models, schemas
+from api.evacuee_service import schemas  # 修正: api.evacuee から schemas をインポート
+from api.evacuee_service import models  # models をインポート
 from sqlalchemy import text
 from fastapi.encoders import jsonable_encoder
 
@@ -14,7 +15,7 @@ def get_evacuee_details(db: Session):
             shelter.name AS shelter_name,
             shelter.address AS shelter_address
         FROM
-            evacuee_table AS evacuee
+            evacuees AS evacuee
             INNER JOIN my_number_card AS card ON evacuee.evacuee_id = card.card_number
             INNER JOIN shelter_table AS shelter ON evacuee.shelter_code = shelter.shelter_code;
     """)
@@ -38,42 +39,17 @@ def get_evacuee_details(db: Session):
     return response_content
 
 def get_evacuees(db: Session, skip: int = 0, limit: int = 10):
-    """
-    複数の避難者情報を取得する関数
-
-    Args:
-        db (Session): データベースセッション。
-        skip (int): スキップするレコードの数。デフォルトは0。
-        limit (int): 取得するレコードの上限。デフォルトは10。
-
-    Returns:
-        List[models.Evacuee]: 避難者情報のリスト。
+    """複数の避難者情報を取得する関数
     """
     return db.query(models.Evacuee).offset(skip).limit(limit).all()
 
 def get_evacuee(db: Session, evacuee_id: str):
-    """
-    特定の避難者情報をIDで取得する関数
-
-    Args:
-        db (Session): データベースセッション。
-        evacuee_id (str): 取得する避難者のID。
-
-    Returns:
-        models.Evacuee: 避難者情報。見つからない場合はNoneを返す。
+    """特定の避難者情報をIDで取得する関数
     """
     return db.query(models.Evacuee).filter(models.Evacuee.evacuee_id == evacuee_id).first()
 
 def create_evacuee(db: Session, evacuee: schemas.EvacueeCreate):
-    """
-    新しい避難者情報を作成する関数
-
-    Args:
-        db (Session): データベースセッション。
-        evacuee (schemas.EvacueeCreate): 作成する避難者情報のデータ。
-
-    Returns:
-        models.Evacuee: 作成された避難者情報。
+    """新しい避難者情報を作成する関数
     """
     db_evacuee = models.Evacuee(**evacuee.dict())
     db.add(db_evacuee)
@@ -82,16 +58,7 @@ def create_evacuee(db: Session, evacuee: schemas.EvacueeCreate):
     return db_evacuee
 
 def update_evacuee(db: Session, evacuee_id: str, evacuee_update: schemas.EvacueeUpdate):
-    """
-    既存の避難者情報を更新する関数
-
-    Args:
-        db (Session): データベースセッション。
-        evacuee_id (str): 更新する避難者のID。
-        evacuee_update (schemas.EvacueeUpdate): 更新するデータ。
-
-    Returns:
-        models.Evacuee: 更新された避難者情報。見つからない場合はNoneを返す。
+    """既存の避難者情報を更新する関数
     """
     db_evacuee = db.query(models.Evacuee).filter(models.Evacuee.evacuee_id == evacuee_id).first()
     if db_evacuee:
@@ -102,15 +69,7 @@ def update_evacuee(db: Session, evacuee_id: str, evacuee_update: schemas.Evacuee
     return db_evacuee
 
 def delete_evacuee(db: Session, evacuee_id: str):
-    """
-    特定の避難者情報を削除する関数
-
-    Args:
-        db (Session): データベースセッション。
-        evacuee_id (str): 削除する避難者のID。
-
-    Returns:
-        models.Evacuee: 削除された避難者情報。見つからない場合はNoneを返す。
+    """特定の避難者情報を削除する関数
     """
     db_evacuee = db.query(models.Evacuee).filter(models.Evacuee.evacuee_id == evacuee_id).first()
     if db_evacuee:

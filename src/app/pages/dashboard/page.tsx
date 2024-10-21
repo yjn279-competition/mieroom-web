@@ -1,8 +1,8 @@
-'use client'
+'use client';
 
 import React, { useState, useEffect } from 'react';
-import Charts from './Charts';
-import UserList from './UserList';
+import Charts from './components/Charts';
+import UserList from './components/UserList';
 
 interface Evacuee {
   full_name: string;
@@ -23,7 +23,7 @@ interface Material {
   expiration_date: string;
 }
 
-const Dashboard: React.FC = () => {
+export default function Page() {
   const [evacuees, setEvacuees] = useState<Evacuee[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [filteredEvacuees, setFilteredEvacuees] = useState<Evacuee[]>([]);
@@ -35,6 +35,7 @@ const Dashboard: React.FC = () => {
     is_safety: '',
   });
 
+  // 避難者データと物資データをフェッチ
   useEffect(() => {
     const fetchEvacuees = async () => {
       try {
@@ -70,15 +71,14 @@ const Dashboard: React.FC = () => {
     fetchMaterials();
   }, []);
 
+  // フィルタリング
   useEffect(() => {
-    // 避難者データのフィルタリング
     const filteredEvacuees = evacuees.filter(evacuee =>
       (evacuee.full_name.includes(searchTerm) || evacuee.address.includes(searchTerm)) &&
       (filters.shelter_name === '' || evacuee.shelter_name === filters.shelter_name) &&
       (filters.is_safety === '' || String(evacuee.is_safety) === filters.is_safety)
     );
 
-    // 物資データのフィルタリング
     const filteredMaterials = materials.filter(material =>
       filters.shelter_name === '' || material.shelter_name === filters.shelter_name
     );
@@ -127,6 +127,4 @@ const Dashboard: React.FC = () => {
       </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
