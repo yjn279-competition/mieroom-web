@@ -50,7 +50,7 @@ export function OccupancyChart() {
   const handleClick = () => { console.log("clicked") }
 
   return (
-    <Card className="flex flex-col" onClick={handleClick}>
+    <Card className="basis-1/2" onClick={handleClick}>
       <CardHeader className="items-center pb-0">
         <CardTitle>避難者状況</CardTitle>
         <CardDescription>性別ごとの避難者数</CardDescription>

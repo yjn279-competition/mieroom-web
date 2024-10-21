@@ -82,7 +82,7 @@ const SuppliesChart = () => {
   }
 
   return (
-    <Card>
+    <Card className="basis-1/2">
       <CardHeader>
         <CardTitle>物資不足状況</CardTitle>
       </CardHeader>
@@ -136,7 +136,7 @@ const StatusChart = () => {
   }
 
   return (
-    <Card>
+    <Card className="basis-1/2">
       <CardHeader>
         <CardTitle>避難者ステータス</CardTitle>
       </CardHeader>
@@ -240,13 +240,15 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">避難所管理ダッシュボード</h1>
-      <div className="grid grid-cols-3 gap-4 h-[calc(100vh-100px)]">
-        <div className="col-span-1 space-y-4">
-          <OccupancyChart />
-          <SuppliesChart />
-        </div>
-        <div className="col-span-2 space-y-4">
+      <div className="flex flex-row gap-4">
+        <div className="flex flex-col basis-8/12 gap-4">
+          <div className="flex flex-row gap-4">
+            <OccupancyChart />
+            <SuppliesChart />
+          </div>
           <StatusChart />
+        </div>
+        <div className="basis-4/12">
           <OutTable />
         </div>
       </div>
