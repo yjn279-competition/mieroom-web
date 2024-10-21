@@ -5,9 +5,7 @@ import { OccupancyChart} from "@/app/cities/[cityId]/shelters/[shelterId]/compon
 import { OutTable } from "@/app/cities/[cityId]/shelters/[shelterId]/components/Table"
 import { SuppliesChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/RadarChart"
 import { StatusChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/StatusChart"
-import { SuppliesChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/SuppliesChart"
 
-<<<<<<< HEAD
 // Mock data - replace with actual data in production
 const shelterData = {
   capacity: 1000,
@@ -75,44 +73,6 @@ const outData = [
 ]
 
 
-const OutTable = () => {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>外出中の避難市民</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>氏名</TableHead>
-              <TableHead>年齢</TableHead>
-              <TableHead>性別</TableHead>
-              <TableHead>経過時間</TableHead>
-              <TableHead>予定時間</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {outData.map((person, index) => (
-              <TableRow key={index}>
-                <TableCell>{person.name}</TableCell>
-                <TableCell>{person.age}</TableCell>
-                <TableCell>{person.gender}</TableCell>
-                <TableCell className={person.elapsedTime > person.plannedTime ? 'text-red-500' : ''}>
-                  {person.elapsedTime}
-                </TableCell>
-                <TableCell>{person.plannedTime}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  )
-}
-
-=======
->>>>>>> 177e3b4194b0b2275024643742279828099b95cd
 export default function Dashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
 
