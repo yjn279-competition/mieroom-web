@@ -1,11 +1,12 @@
 'use client'
 
 import React, { useState } from 'react'
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { OccupancyChart} from "@/app/cities/[cityId]/shelters/[shelterId]/components/PieChart"
 
 // Mock data - replace with actual data in production
 const shelterData = {
@@ -73,93 +74,6 @@ const outData = [
   { name: '鈴木一郎', age: 58, gender: '男性', elapsedTime: '3:15', plannedTime: '3:00' },
 ]
 
-const OccupancyChart = () => {
-  const [selectedCategory, setSelectedCategory] = useState(null)
-
-  const data = [
-    { name: '男性', value: shelterData.maleCount },
-    { name: '女性', value: shelterData.femaleCount },
-    { name: '残り', value: shelterData.capacity - shelterData.currentOccupancy },
-  ]
-  const COLORS = ['#0088FE', '#FF8042', '#CCCCCC']
-
-  const handleClick = (entry, index) => {
-    if (index !== 2) { // Ignore clicks on "残り" segment
-      setSelectedCategory(entry.name)
-    }
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>避難所収容状況</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie
-                data={data}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                fill="#8884d8"
-                paddingAngle={5}
-                dataKey="value"
-                onClick={handleClick}
-              >
-                {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} cursor={index !== 2 ? 'pointer' : 'default'} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => `${value}人`} />
-              <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
-                {`${shelterData.currentOccupancy}/${shelterData.capacity}`}
-              </text>
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="mt-4 flex justify-center">
-          {data.map((entry, index) => (
-            <div key={`legend-${index}`} className="flex items-center mr-4">
-              <div className="w-3 h-3 mr-1" style={{ backgroundColor: COLORS[index] }}></div>
-              <span>{entry.name}</span>
-            </div>
-          ))}
-        </div>
-        <Dialog open={!!selectedCategory} onOpenChange={() => setSelectedCategory(null)}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{selectedCategory}の避難者リスト</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="h-[300px] w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>年齢</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shelterData.evacuees
-                    .filter(e => e.gender === selectedCategory)
-                    .map((evacuee, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{evacuee.name}</TableCell>
-                        <TableCell>{evacuee.age}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  )
-}
-
 const SuppliesChart = () => {
   const [selectedSupply, setSelectedSupply] = useState(null)
 
@@ -180,7 +94,7 @@ const SuppliesChart = () => {
               <XAxis type="number" />
               <YAxis dataKey="name" type="category" />
               <Tooltip />
-              <Bar dataKey="shortage" fill="#8884d8" />
+              <Bar dataKey="shortage" fill="hsl(var(--chart-1))" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -245,8 +159,8 @@ const StatusChart = () => {
               <YAxis dataKey="status" type="category" />
               <Tooltip />
               <Legend />
-              <Bar dataKey="male" stackId="a" fill="#0088FE" name="男性" />
-              <Bar dataKey="female" stackId="a" fill="#FF8042" name="女性" />
+              <Bar dataKey="male" stackId="a" fill="hsl(var(--chart-1))" name="男性" />
+              <Bar dataKey="female" stackId="a" fill="hsl(var(--chart-2))" name="女性" />
             </BarChart>
           </ResponsiveContainer>
         </div>
