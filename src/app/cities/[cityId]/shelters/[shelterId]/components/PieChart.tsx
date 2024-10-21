@@ -1,65 +1,64 @@
 "use client"
 
 import * as React from "react"
-import { TrendingUp } from "lucide-react"
 import { Label, Pie, PieChart } from "recharts"
-
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
 import {
   ChartConfig,
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-export const description = "A donut chart with text"
-
 const chartData = [
-  { browser: "男性", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "女性", visitors: 280, fill: "var(--color-safari)" },
-  { browser: "その他", visitors: 87, fill: "var(--color-firefox)" },
+  { gender: "男性", evacuees: 275, fill: "var(--color-男性)" },
+  { gender: "女性", evacuees: 280, fill: "var(--color-女性)" },
+  { gender: "その他", evacuees: 87, fill: "var(--color-その他)" },
 ]
 
 const chartConfig = {
-  visitors: {
-    label: "Visitors",
+  evacuees: {
+    label: "人",
   },
-  chrome: {
+  "男性": {
     label: "男性",
     color: "hsl(var(--chart-1))",
   },
-  safari: {
+  "女性": {
     label: "女性",
     color: "hsl(var(--chart-2))",
   },
-  firefox: {
+  "その他": {
     label: "その他",
     color: "hsl(var(--chart-3))",
   },
 } satisfies ChartConfig
 
 export function OccupancyChart() {
-  const totalVisitors = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
+  const totalEvacuees = React.useMemo(() => {
+    return chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
   }, [])
 
+  const handleClick = () => { console.log("clicked") }
+
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col" onClick={handleClick}>
       <CardHeader className="items-center pb-0">
-        <CardTitle>Pie Chart - Donut with Text</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardTitle>避難者状況</CardTitle>
+        <CardDescription>性別ごとの避難者数</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square max-h-[300px]"
         >
           <PieChart>
             <ChartTooltip
@@ -68,8 +67,8 @@ export function OccupancyChart() {
             />
             <Pie
               data={chartData}
-              dataKey="visitors"
-              nameKey="browser"
+              dataKey="evacuees"
+              nameKey="gender"
               innerRadius={60}
               strokeWidth={5}
             >
@@ -88,14 +87,14 @@ export function OccupancyChart() {
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {totalVisitors.toLocaleString()}
+                          {totalEvacuees.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          Visitors
+                          人
                         </tspan>
                       </text>
                     )
@@ -103,17 +102,13 @@ export function OccupancyChart() {
                 }}
               />
             </Pie>
+            <ChartLegend
+              content={<ChartLegendContent nameKey="gender" />}
+              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
+            />
           </PieChart>
         </ChartContainer>
       </CardContent>
-      <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="leading-none text-muted-foreground">
-          Showing total visitors for the last 6 months
-        </div>
-      </CardFooter>
     </Card>
   )
 }
