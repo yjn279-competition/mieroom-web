@@ -42,15 +42,19 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function OccupancyChart() {
+export function OccupancyChart({
+  setGender,
+}: {
+  setGender: (gender: "男性" | "女性" | "その他" | null) => void
+}) {
   const totalEvacuees = React.useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
   }, [])
 
-  const handleClick = () => { console.log("clicked") }
-
+  const handleClick = () => { setGender("男性") }
+  
   return (
-    <Card className="basis-1/2" onClick={handleClick}>
+    <Card className="basis-1/2">
       <CardHeader className="items-center pb-0">
         <CardTitle>避難者状況</CardTitle>
         <CardDescription>性別ごとの避難者数</CardDescription>
@@ -71,6 +75,7 @@ export function OccupancyChart() {
               nameKey="gender"
               innerRadius={60}
               strokeWidth={5}
+              onClick={handleClick}
             >
               <Label
                 content={({ viewBox }) => {
