@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { OccupancyChart} from "@/app/cities/[cityId]/shelters/[shelterId]/components/PieChart"
+import { StatusChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/StatusChart"
 
 // Mock data - replace with actual data in production
 const shelterData = {
@@ -128,77 +129,6 @@ const SuppliesChart = () => {
   )
 }
 
-const StatusChart = () => {
-  const [selectedStatus, setSelectedStatus] = useState(null)
-
-  const handleClick = (entry, gender) => {
-    setSelectedStatus({ ...entry, selectedGender: gender })
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>避難者ステータス</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={statusData} 
-              layout="vertical"
-              onClick={(data) => {
-                if (data && data.activePayload) {
-                  const entry = data.activePayload[0].payload
-                  const gender = data.activeTooltipIndex === 0 ? '男性' : '女性'
-                  handleClick(entry, gender)
-                }
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="status" type="category" />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="male" stackId="a" fill="hsl(var(--chart-1))" name="男性" />
-              <Bar dataKey="female" stackId="a" fill="hsl(var(--chart-2))" name="女性" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <Dialog open={!!selectedStatus} onOpenChange={() => setSelectedStatus(null)}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{selectedStatus?.status}の{selectedStatus?.selectedGender}避難者リスト</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="h-[300px] w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>氏名</TableHead>
-                    <TableHead>年齢</TableHead>
-                    <TableHead>性別</TableHead>
-                    <TableHead>詳細</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedStatus?.details
-                    .filter(d => d.gender === selectedStatus.selectedGender)
-                    .map((detail, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{detail.name}</TableCell>
-                        <TableCell>{detail.age}</TableCell>
-                        <TableCell>{detail.gender}</TableCell>
-                        <TableCell>{detail.detail}</TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  )
-}
 
 const OutTable = () => {
   return (
