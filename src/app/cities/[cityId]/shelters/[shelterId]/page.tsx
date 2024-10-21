@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { OccupancyChart} from "@/app/cities/[cityId]/shelters/[shelterId]/components/PieChart"
 import { StatusChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/StatusChart"
+import { SuppliesChart } from "@/app/cities/[cityId]/shelters/[shelterId]/components/SuppliesChart"
 
 // Mock data - replace with actual data in production
 const shelterData = {
@@ -74,60 +75,6 @@ const outData = [
   { name: '佐藤花子', age: 32, gender: '女性', elapsedTime: '1:45', plannedTime: '2:00' },
   { name: '鈴木一郎', age: 58, gender: '男性', elapsedTime: '3:15', plannedTime: '3:00' },
 ]
-
-const SuppliesChart = () => {
-  const [selectedSupply, setSelectedSupply] = useState(null)
-
-  const handleClick = (entry) => {
-    setSelectedSupply(entry)
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>物資不足状況</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={suppliesData} layout="vertical" onClick={(data) => data && handleClick(data.activePayload[0].payload)}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis dataKey="name" type="category" />
-              <Tooltip />
-              <Bar dataKey="shortage" fill="hsl(var(--chart-1))" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <Dialog open={!!selectedSupply} onOpenChange={() => setSelectedSupply(null)}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{selectedSupply?.name}の在庫状況</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="h-[300px] w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>物資名</TableHead>
-                    <TableHead>残り貯蔵量</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedSupply?.items.map((item, i) => (
-                    <TableRow key={i}>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.remaining}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  )
-}
 
 
 const OutTable = () => {
