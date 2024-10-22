@@ -1,44 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import Grid from '@mui/material/Grid2';
-
 import {
-  Box,
-  Container,
   Card,
   CardContent,
   CardHeader,
-  Typography,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
+  TableHeader,
   TableRow,
-  Paper,
-  LinearProgress,
-  Fade,
-  Grow,
-} from '@mui/material';
-import {
-  PeopleAlt as PeopleAltIcon,
-  Home as HomeIcon,
-  Warning as WarningIcon,
-  Inventory as InventoryIcon,
-} from '@mui/icons-material';
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from 'recharts';
+} from "@/components/ui/table";
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 
 // 仮のデータ
 const evacueeData = [
@@ -64,37 +42,33 @@ export default function Prefecture() {
   const [selectedMunicipality, setSelectedMunicipality] = useState(null);
 
   return (
-    <Container fixed className="p-0">
-      <Grid container spacing={3}>
-        <Grid size={8}>
+    <div className="container mx-auto p-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>災害対策マップ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[calc(100vh-200px)] bg-gray-200 rounded">
+              <p className="p-2 text-sm">ここに実際のマップが表示されます。</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-4">
           <Card>
-            <CardHeader title="災害対策マップ" />
+            <CardHeader>
+              <CardTitle>避難者状況</CardTitle>
+            </CardHeader>
             <CardContent>
-              <Box sx={{ height: 'calc(100vh - 200px)', bgcolor: 'grey.200', borderRadius: 1 }}>
-                {/* マップコンポーネントをここに実装 */}
-                <Typography variant="body2" sx={{ p: 2 }}>
-                  ここに実際のマップが表示されます。
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-      <Grid size={12}>
-        <Fade in={true} timeout={500}>
-          <Card>
-            <CardHeader title="避難者状況" />
-            <CardContent>
-              <Grid container spacing={2} alignItems="center" sx={{ mb: 2 }}>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PeopleAltIcon color="success" sx={{ mr: 1 }} />
-                  <Typography variant="body1">避難済み: 3,000人</Typography>
-                </Grid>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PeopleAltIcon color="error" sx={{ mr: 1 }} />
-                  <Typography variant="body1">未避難: 5,500人</Typography>
-                </Grid>
-              </Grid>
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="flex items-center">
+                  <span>避難済み: 3,000人</span>
+                </div>
+                <div className="flex items-center">
+                  <span>未避難: 5,500人</span>
+                </div>
+              </div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
                   <Pie
@@ -115,12 +89,11 @@ export default function Prefecture() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Fade>
-      </Grid>
-      <Grid size={12}>
-        <Fade in={true} timeout={500} style={{ transitionDelay: '200ms' }}>
+
           <Card>
-            <CardHeader title="物資状況" />
+            <CardHeader>
+              <CardTitle>物資状況</CardTitle>
+            </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={resourceData}>
@@ -134,97 +107,76 @@ export default function Prefecture() {
               </ResponsiveContainer>
             </CardContent>
           </Card>
-        </Fade>
-      </Grid>
-      <Grid size={12}>
-        <Fade in={true} timeout={500} style={{ transitionDelay: '400ms' }}>
-          <Card>
-            <CardHeader title="市区町村別避難所情報" />
-            <CardContent>
-              <TableContainer component={Paper}>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>市区町村</TableCell>
-                      <TableCell align="right">避難所数</TableCell>
-                      <TableCell align="right">使用可能率</TableCell>
-                      <TableCell align="right">避難者数</TableCell>
-                      <TableCell align="right">収容率</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {municipalityData.map((row) => (
-                      <TableRow
-                        key={row.name}
-                        hover
-                        onClick={() => setSelectedMunicipality(row)}
-                        sx={{ '&:last-child td, &:last-child th': { border: 0 }, cursor: 'pointer' }}
-                      >
-                        <TableCell component="th" scope="row">
-                          {row.name}
-                        </TableCell>
-                        <TableCell align="right">{row.shelters}</TableCell>
-                        <TableCell align="right">
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box sx={{ width: '100%', mr: 1 }}>
-                              <LinearProgress variant="determinate" value={row.availablePercentage} />
-                            </Box>
-                            <Box sx={{ minWidth: 35 }}>
-                              <Typography variant="body2" color="text.secondary">{`${Math.round(
-                                row.availablePercentage,
-                              )}%`}</Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">{row.evacuees}</TableCell>
-                        <TableCell align="right">
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Box sx={{ width: '100%', mr: 1 }}>
-                              <LinearProgress variant="determinate" value={row.capacityPercentage} />
-                            </Box>
-                            <Box sx={{ minWidth: 35 }}>
-                              <Typography variant="body2" color="text.secondary">{`${Math.round(
-                                row.capacityPercentage,
-                              )}%`}</Typography>
-                            </Box>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Fade>
-      </Grid>
+        </div>
+      </div>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle>市区町村別避難所情報</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>市区町村</TableHead>
+                <TableHead className="text-right">避難所数</TableHead>
+                <TableHead className="text-right">使用可能率</TableHead>
+                <TableHead className="text-right">避難者数</TableHead>
+                <TableHead className="text-right">収容率</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {municipalityData.map((row) => (
+                <TableRow
+                  key={row.name}
+                  className="cursor-pointer hover:bg-gray-100"
+                  onClick={() => setSelectedMunicipality(row)}
+                >
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell className="text-right">{row.shelters}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end">
+                      <Progress value={row.availablePercentage} className="w-full mr-2" />
+                      <span className="text-sm text-gray-500">{`${Math.round(row.availablePercentage)}%`}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">{row.evacuees}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end">
+                      <Progress value={row.capacityPercentage} className="w-full mr-2" />
+                      <span className="text-sm text-gray-500">{`${Math.round(row.capacityPercentage)}%`}</span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       {selectedMunicipality && (
-        <Grow in={true} timeout={300}>
-          <Card sx={{ position: 'fixed', bottom: 16, right: 16, width: 300 }}>
-            <CardHeader title={`${selectedMunicipality.name} の詳細情報`} />
-            <CardContent>
-              <Grid container spacing={2}>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <HomeIcon sx={{ mr: 1 }} />
-                  <Typography variant="body2">避難所数: {selectedMunicipality.shelters}</Typography>
-                </Grid>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <PeopleAltIcon sx={{ mr: 1 }} />
-                  <Typography variant="body2">避難者数: {selectedMunicipality.evacuees}</Typography>
-                </Grid>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <WarningIcon sx={{ mr: 1 }} />
-                  <Typography variant="body2">使用可能率: {selectedMunicipality.availablePercentage}%</Typography>
-                </Grid>
-                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
-                  <InventoryIcon sx={{ mr: 1 }} />
-                  <Typography variant="body2">収容率: {selectedMunicipality.capacityPercentage}%</Typography>
-                </Grid>
-              </Grid>
-            </CardContent>
-          </Card>
-        </Grow>
+        <Card className="fixed bottom-4 right-4 w-72">
+          <CardHeader>
+            <CardTitle>{`${selectedMunicipality.name} の詳細情報`}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center">
+                <span className="text-sm">避難所数: {selectedMunicipality.shelters}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm">避難者数: {selectedMunicipality.evacuees}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm">使用可能率: {selectedMunicipality.availablePercentage}%</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-sm">収容率: {selectedMunicipality.capacityPercentage}%</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
-    </Container>
+    </div>
   );
 }
