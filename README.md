@@ -1,78 +1,40 @@
-# OPEN DATA HACKATHON 2024
+# Welcome to Remix!
 
-## Prerequisites
+- 📖 [Remix docs](https://remix.run/docs)
 
-- [Volta](https://docs.volta.sh/guide/getting-started)：JavaScriptのツールマネージャー
-- [Rye](https://rye.astral.sh/)：Pythonのパッケージマネージャー
+## Development
 
-## Getting Started
+Run the dev server:
 
-### Build a Enviroment
-
-```shell
-cd open-data-hackathon-2024
-
-# Install front-end packages
-
-volta install node
-npm install
-
-# Install back-end packages
-
-rye sync
-```
-
-### Front-End
-
-1. 以下のコマンドでサーバーを起動する。
-
-```shell
+```shellscript
 npm run dev
 ```
 
-2. [http://localhost:3000](http://localhost:3000)にアクセスする。
+## Deployment
 
-### Back-End
+First, build your app for production:
 
-1. 新しいターミナルを開く。
-2. 以下のコマンドで仮想環境を起動する。
-
-```shell
-. .venv/bin/activate
+```sh
+npm run build
 ```
 
-3. 以下のコマンドでサーバーを起動する。
+Then run the app in production mode:
 
-```shell
-cd src/api
-uvicorn main:app --reload
+```sh
+npm start
 ```
 
-4. [http://127.0.0.1:8000](http://127.0.0.1:8000)でAPIサーバーにアクセスできる。
+Now you'll need to pick a host to deploy it to.
 
+### DIY
 
-## For Developers
+If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
 
-### 技術スタック
+Make sure to deploy the output of `npm run build`
 
-- フロントエンド：React × Next.js
-- バックエンド：Python × FastAPI
-- データベース：Supabase
+- `build/server`
+- `build/client`
 
-### ディレクトリ構成
+## Styling
 
-```plaintext
-/src
-  /api : バックエンドのディレクトリ
-  /app : フロントエンドのディレクトリ
-...
-```
-
-## References
-
-- [Volta](https://docs.volta.sh/guide/getting-started)
-- [React](https://ja.react.dev/learn)
-- [Next.js](https://nextjs.org/docs)
-- [Rye](https://rye.astral.sh/)
-- [FastAPI](https://fastapi.tiangolo.com/ja/)
-- [Supabase](https://supabase.com/docs/guides/database/overview)
+This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.
