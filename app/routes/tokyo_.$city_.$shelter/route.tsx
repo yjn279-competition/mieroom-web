@@ -1,8 +1,8 @@
 import { useState } from "react"
-import { OccupancyChart } from "@/routes/tokyo_.$city_.$shelter/PieChart"
-import { OutTable } from "@/routes/tokyo_.$city_.$shelter/Table"
-import { SuppliesChart } from "@/routes/tokyo_.$city_.$shelter/SuppliesChart"
-import { StatusChart } from "@/routes/tokyo_.$city_.$shelter/StatusChart"
+import { OccupancyChart } from "@/routes/tokyo_.$city_.$shelter/pieChart"
+import { OutTable } from "@/routes/tokyo_.$city_.$shelter/table"
+import { SuppliesChart } from "@/routes/tokyo_.$city_.$shelter/suppliesChart"
+import { StatusChart } from "@/routes/tokyo_.$city_.$shelter/statusChart"
 
 // Mock data - replace with actual data in production
 const shelterData = {
