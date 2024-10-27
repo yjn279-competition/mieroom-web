@@ -1,40 +1,79 @@
-# Welcome to Remix!
+# mieroom
 
-- 📖 [Remix docs](https://remix.run/docs)
+## Prerequisites
 
-## Development
+- [Volta](https://docs.volta.sh/guide/getting-started)：JavaScriptのツールマネージャー
+  - [pnpmを利用するため、環境変数に `VOLTA_FEATURE_PNPM=1` を設定しておく。](https://docs.volta.sh/advanced/pnpm)
+- [Rye](https://rye.astral.sh/)：Pythonのパッケージマネージャー
 
-Run the dev server:
+## Getting Started
 
-```shellscript
-npm run dev
+### Build a Enviroment
+
+```shell
+cd mieroom-web
+
+# Install front-end packages
+
+volta install node
+pnpm install
+
+# Install back-end packages
+
+rye sync
 ```
 
-## Deployment
+### Front-End
 
-First, build your app for production:
+1. 以下のコマンドでサーバーを起動する。
 
-```sh
-npm run build
+```shell
+pnpm run dev
 ```
 
-Then run the app in production mode:
+2. [http://localhost:3000](http://localhost:3000)にアクセスする。
 
-```sh
-npm start
+### Back-End
+
+1. 新しいターミナルを開く。
+2. 以下のコマンドで仮想環境を起動する。
+
+```shell
+. .venv/bin/activate
 ```
 
-Now you'll need to pick a host to deploy it to.
+3. 以下のコマンドでサーバーを起動する。
 
-### DIY
+```shell
+cd src/api
+uvicorn main:app --reload
+```
 
-If you're familiar with deploying Node applications, the built-in Remix app server is production-ready.
+4. [http://127.0.0.1:8000](http://127.0.0.1:8000)でAPIサーバーにアクセスできる。
 
-Make sure to deploy the output of `npm run build`
 
-- `build/server`
-- `build/client`
+## For Developers
 
-## Styling
+### 技術スタック
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever css framework you prefer. See the [Vite docs on css](https://vitejs.dev/guide/features.html#css) for more information.
+- フロントエンド：React × Next.js
+- バックエンド：Python × FastAPI
+- データベース：Supabase
+
+### ディレクトリ構成
+
+```plaintext
+/src
+  /api : バックエンドのディレクトリ
+  /app : フロントエンドのディレクトリ
+...
+```
+
+## References
+
+- [Volta](https://docs.volta.sh/guide/getting-started)
+- [React](https://ja.react.dev/learn)
+- [Next.js](https://nextjs.org/docs)
+- [Rye](https://rye.astral.sh/)
+- [FastAPI](https://fastapi.tiangolo.com/ja/)
+- [Supabase](https://supabase.com/docs/guides/database/overview)
