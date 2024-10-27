@@ -31,7 +31,7 @@ rye sync
 pnpm run dev
 ```
 
-2. [http://localhost:3000](http://localhost:3000)にアクセスする。
+2. [http://localhost:5173](http://localhost:5173)にアクセスする。
 
 ### Back-End
 
@@ -56,24 +56,33 @@ uvicorn main:app --reload
 
 ### 技術スタック
 
-- フロントエンド：React × Next.js
+- フロントエンド：React × Remix
 - バックエンド：Python × FastAPI
 - データベース：Supabase
 
 ### ディレクトリ構成
 
 ```plaintext
-/src
-  /api : バックエンドのディレクトリ
-  /app : フロントエンドのディレクトリ
+/api : バックエンドのディレクトリ
+/app : フロントエンドのディレクトリ
 ...
+```
+
+### フロントエンド
+
+- shadcn/uiでコンポーネントを追加する。
+
+```shell
+pnpm dlx shadcn@latest add {component}
 ```
 
 ## References
 
-- [Volta](https://docs.volta.sh/guide/getting-started)
 - [React](https://ja.react.dev/learn)
-- [Next.js](https://nextjs.org/docs)
+- [Remix](https://remix.run/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Volta](https://docs.volta.sh/guide/getting-started)
+- [pnpm](https://pnpm.io/ja/)
 - [Rye](https://rye.astral.sh/)
 - [FastAPI](https://fastapi.tiangolo.com/ja/)
 - [Supabase](https://supabase.com/docs/guides/database/overview)
