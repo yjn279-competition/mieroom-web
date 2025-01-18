@@ -74,20 +74,21 @@ const outData = [
 
 export default function Dashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
+  const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null)
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="container m-4">
       <h1 className="text-2xl font-bold mb-4">避難所管理ダッシュボード</h1>
       <div className="flex flex-row gap-4">
         <div className="flex flex-col basis-8/12 gap-4">
           <div className="flex flex-row gap-4">
             <OccupancyChart setGender={setGender} />
-            <SuppliesChart />
+            <SuppliesChart setStatus={setStatus} />
           </div>
           <StatusChart />
         </div>
         <div className="basis-4/12">
-          <OutTable gender={gender} />
+          <OutTable gender={gender} status={status} />
         </div>
       </div>
     </div>

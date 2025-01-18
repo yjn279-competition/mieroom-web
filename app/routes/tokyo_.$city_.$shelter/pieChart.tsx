@@ -16,10 +16,11 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
+const TOTAL_PEOPLE = 235
 const chartData = [
-  { gender: "男性", evacuees: 275, fill: "var(--color-男性)" },
-  { gender: "女性", evacuees: 280, fill: "var(--color-女性)" },
-  { gender: "その他", evacuees: 87, fill: "var(--color-その他)" },
+  { gender: "男性", evacuees: 47, fill: "var(--color-男性)" },
+  { gender: "女性", evacuees: 63, fill: "var(--color-女性)" },
+  { gender: "その他", evacuees: 49, fill: "var(--color-その他)" },
 ]
 
 const chartConfig = {
@@ -45,17 +46,20 @@ export function OccupancyChart({
 }: {
   setGender: (gender: "男性" | "女性" | "その他" | null) => void
 }) {
-  const totalEvacuees = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
-  }, [])
+  const totalEvacuees = chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
+  const endAngle = 360 * (totalEvacuees / TOTAL_PEOPLE) + 90
 
-  const handleClick = () => { setGender("男性") }
+  const handleClick = (data: any) => {
+    if (data && data.gender) {
+      setGender(data.gender as "男性" | "女性" | "その他")
+    }
+  }
   
   return (
     <Card className="basis-1/2">
       <CardHeader className="items-center pb-0">
-        <CardTitle>避難者状況</CardTitle>
-        <CardDescription>性別ごとの避難者数</CardDescription>
+        <CardTitle>避難者数</CardTitle>
+        <CardDescription>避難者数と性別ごとの内訳</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -74,6 +78,8 @@ export function OccupancyChart({
               innerRadius={60}
               strokeWidth={5}
               onClick={handleClick}
+              startAngle={90}
+              endAngle={endAngle}
             >
               <Label
                 content={({ viewBox }) => {
@@ -90,7 +96,7 @@ export function OccupancyChart({
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {totalEvacuees.toLocaleString()}
+                          {totalEvacuees}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
