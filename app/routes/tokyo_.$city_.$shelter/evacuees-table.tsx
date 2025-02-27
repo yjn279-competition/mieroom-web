@@ -63,7 +63,7 @@ const outData = [
   { name: '北村美香', age: 35, gender: '女性', status: '無事', elapsedTime: '1:30', plannedTime: '2:00' },
 ]
 
-export function OutTable({
+export function EvacueesTable({
   gender,
   status,
 }: {
@@ -77,33 +77,35 @@ export function OutTable({
   })
 
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader>
-        <CardTitle>外出中の避難市民</CardTitle>
+        <CardTitle>避難者一覧</CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">氏名</TableHead>
-              <TableHead className="text-center">年齢</TableHead>
-              <TableHead className="text-center">性別</TableHead>
-              <TableHead className="text-center">状態</TableHead>
-              <TableHead className="text-right">外出時間</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredData.map((person) => (
-              <TableRow key={person.name}>
-                <TableCell className="font-medium">{person.name}</TableCell>
-                <TableCell className="text-center">{person.age}</TableCell>
-                <TableCell className="text-center">{person.gender}</TableCell>
-                <TableCell className="text-center">{person.status}</TableCell>
-                <TableCell className="text-right">{person.elapsedTime}</TableCell>
+        <div className="h-[calc(100vh-12rem)] overflow-y-auto">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[100px]">氏名</TableHead>
+                <TableHead className="text-center">年齢</TableHead>
+                <TableHead className="text-center">性別</TableHead>
+                <TableHead className="text-center">状態</TableHead>
+                <TableHead className="text-right">外出時間</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredData.map((person) => (
+                <TableRow key={person.name}>
+                  <TableCell className="font-medium">{person.name}</TableCell>
+                  <TableCell className="text-center">{person.age}</TableCell>
+                  <TableCell className="text-center">{person.gender}</TableCell>
+                  <TableCell className="text-center">{person.status}</TableCell>
+                  <TableCell className="text-right">{person.elapsedTime}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

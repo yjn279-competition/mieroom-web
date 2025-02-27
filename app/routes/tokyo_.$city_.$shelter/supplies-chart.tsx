@@ -28,9 +28,9 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function StatusChart() {
+export function SuppliesChart() {
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader>
         <CardTitle>物資不足状況</CardTitle>
       </CardHeader>

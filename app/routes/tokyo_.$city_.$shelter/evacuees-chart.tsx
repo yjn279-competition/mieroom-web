@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Label, Pie, PieChart } from "recharts"
 import {
   Card,
@@ -41,7 +40,7 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function OccupancyChart({
+export function EvacueesChart({
   setGender,
 }: {
   setGender: (gender: "男性" | "女性" | "その他" | null) => void
@@ -56,15 +55,15 @@ export function OccupancyChart({
   }
   
   return (
-    <Card className="basis-1/2">
+    <Card className="h-full">
       <CardHeader className="items-center pb-0">
         <CardTitle>避難者数</CardTitle>
         <CardDescription>避難者数と性別ごとの内訳</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
+          className="mx-auto aspect-square max-h-[15rem]"
         >
           <PieChart>
             <ChartTooltip
@@ -111,10 +110,7 @@ export function OccupancyChart({
                 }}
               />
             </Pie>
-            <ChartLegend
-              content={<ChartLegendContent nameKey="gender" />}
-              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-            />
+            <ChartLegend content={<ChartLegendContent nameKey="gender" />} />
           </PieChart>
         </ChartContainer>
       </CardContent>
