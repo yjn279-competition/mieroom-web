@@ -5,11 +5,30 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { EvacueesChart } from "@/routes/tokyo_.$city_.$shelter/evacuees-chart";
-import { SuppliesChart } from "@/routes/tokyo_.$city_.$shelter/supplies-chart";
+import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
+import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
+import { useParams } from "@remix-run/react";
+
+// Mock data for city level
+const TOTAL_PEOPLE = 350;
+const evacueesByGender: EvacueeGenderData[] = [
+  { name: "男性", value: 85, fill: "var(--color-男性)" },
+  { name: "女性", value: 110, fill: "var(--color-女性)" },
+  { name: "その他", value: 55, fill: "var(--color-その他)" },
+];
+
+const suppliesShortageData: BarChartData[] = [
+  { item: "食料", shortage: 300, fill: "hsl(var(--chart-1))" },
+  { item: "水", shortage: 250, fill: "hsl(var(--chart-2))" },
+  { item: "衛生用品", shortage: 180, fill: "hsl(var(--chart-3))" },
+  { item: "毛布", shortage: 120, fill: "hsl(var(--chart-4))" },
+  { item: "医薬品", shortage: 80, fill: "hsl(var(--chart-5))" },
+];
 
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
+  const params = useParams();
+  const cityName = params.city || "世田谷区";
 
   if (typeof document === 'undefined') {
     return null
@@ -17,7 +36,7 @@ export default function CityDashboard() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">区市町村ダッシュボード</h1>
+      <h1 className="text-2xl font-bold mb-4">{cityName}ダッシュボード</h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <iframe
@@ -33,10 +52,18 @@ export default function CityDashboard() {
         </div>
         <div className="flex flex-col basis-4/12 gap-4 h-full">
           <div className="h-1/2">
-            <EvacueesChart setGender={setGender} />
+            <EvacueesChart 
+              title={`${cityName}避難者数`}
+              data={evacueesByGender}
+              totalPeople={TOTAL_PEOPLE}
+              setGender={setGender} 
+            />
           </div>
           <div className="h-1/2">
-            <SuppliesChart />
+            <SuppliesChart 
+              title={`${cityName}物資不足状況`}
+              data={suppliesShortageData} 
+            />
           </div>
         </div>
       </div>

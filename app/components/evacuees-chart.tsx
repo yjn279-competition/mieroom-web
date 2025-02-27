@@ -15,50 +15,59 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const TOTAL_PEOPLE = 235
-const chartData = [
-  { gender: "男性", evacuees: 47, fill: "var(--color-男性)" },
-  { gender: "女性", evacuees: 63, fill: "var(--color-女性)" },
-  { gender: "その他", evacuees: 49, fill: "var(--color-その他)" },
-]
+export interface EvacueeGenderData {
+  name: string
+  value: number
+  fill: string
+}
 
-const chartConfig = {
-  evacuees: {
-    label: "人",
-  },
-  "男性": {
-    label: "男性",
-    color: "hsl(var(--chart-1))",
-  },
-  "女性": {
-    label: "女性",
-    color: "hsl(var(--chart-2))",
-  },
-  "その他": {
-    label: "その他",
-    color: "hsl(var(--chart-3))",
-  },
-} satisfies ChartConfig
+export interface EvacueesChartProps {
+  title?: string
+  description?: string
+  data: EvacueeGenderData[]
+  totalPeople: number
+  setGender: (gender: "男性" | "女性" | "その他" | null) => void
+}
 
 export function EvacueesChart({
-  setGender,
-}: {
-  setGender: (gender: "男性" | "女性" | "その他" | null) => void
-}) {
-  const totalEvacuees = chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
-  const endAngle = 360 * (totalEvacuees / TOTAL_PEOPLE) + 90
+  title = "避難者数",
+  description = "避難者数と性別ごとの内訳",
+  data,
+  totalPeople,
+  setGender
+}: EvacueesChartProps) {
+  const chartConfig = {
+    value: {
+      label: "人",
+    },
+    "男性": {
+      label: "男性",
+      color: "hsl(var(--chart-1))",
+    },
+    "女性": {
+      label: "女性",
+      color: "hsl(var(--chart-2))",
+    },
+    "その他": {
+      label: "その他",
+      color: "hsl(var(--chart-3))",
+    },
+  } satisfies ChartConfig
+
+  const totalEvacuees = data.reduce((acc, curr) => acc + curr.value, 0)
+  const endAngle = 360 * (totalEvacuees / totalPeople) + 90
 
   const handleClick = (data: any) => {
-    if (data && data.gender) {
-      setGender(data.gender as "男性" | "女性" | "その他")
+    if (data && data.name) {
+      setGender(data.name as "男性" | "女性" | "その他")
     }
   }
-  
+
   return (
     <Card className="h-full">
       <CardHeader className="items-center pb-0">
-        <CardTitle>避難者数</CardTitle>
-        <CardDescription>避難者数と性別ごとの内訳</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <ChartContainer
@@ -71,9 +80,9 @@ export function EvacueesChart({
               content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={chartData}
-              dataKey="evacuees"
-              nameKey="gender"
+              data={data}
+              dataKey="value"
+              nameKey="name"
               innerRadius={60}
               strokeWidth={5}
               onClick={handleClick}
@@ -110,7 +119,7 @@ export function EvacueesChart({
                 }}
               />
             </Pie>
-            <ChartLegend content={<ChartLegendContent nameKey="gender" />} />
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
           </PieChart>
         </ChartContainer>
       </CardContent>

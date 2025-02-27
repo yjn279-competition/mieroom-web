@@ -1,8 +1,8 @@
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -13,30 +13,38 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const chartData = [
-  { item: "食料", shortage: 200, fill: "hsl(var(--chart-1))" },
-  { item: "水", shortage: 150, fill: "hsl(var(--chart-2))" },
-  { item: "衛生用品", shortage: 120, fill: "hsl(var(--chart-3))" },
-  { item: "毛布", shortage: 80, fill: "hsl(var(--chart-4))" },
-  { item: "医薬品", shortage: 45, fill: "hsl(var(--chart-5))" },
-]
+export interface BarChartData {
+  [key: string]: string | number | undefined
+  fill?: string
+}
 
-const chartConfig = {
-  shortage: {
-    label: "不足数",
-    color: "hsl(var(--chart-1))",
-  },
-} satisfies ChartConfig
+export interface SuppliesChartProps {
+  title?: string
+  description?: string
+  data: BarChartData[]
+}
 
-export function SuppliesChart() {
+export function SuppliesChart({
+  title = "物資不足状況",
+  description,
+  data
+}: SuppliesChartProps) {
+  const chartConfig = {
+    shortage: {
+      label: "不足数",
+      color: "hsl(var(--chart-1))",
+    },
+  } satisfies ChartConfig
+
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>物資不足状況</CardTitle>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={chartData} layout="vertical">
+          <BarChart accessibilityLayer data={data} layout="vertical">
             <CartesianGrid vertical={true} />
             <XAxis type="number" />
             <YAxis
