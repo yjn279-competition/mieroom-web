@@ -62,10 +62,7 @@ export function CityMap() {
                 </ul>
               </div>
               <div className="mt-3">
-                <Link 
-                  to={`/tokyo/${params.city}/${index}`} 
-                  className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm inline-block"
-                >
+                <Link to={`/tokyo/${params.city}/${index}`}>
                   ダッシュボードを表示
                 </Link>
               </div>

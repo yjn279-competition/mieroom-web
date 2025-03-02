@@ -13,6 +13,14 @@ import { ClientOnly } from '@/components/client-only';
 import { CityMap } from "./cityMap.client";
 import fs from 'fs';
 import path from 'path';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 // Define the shelter type based on the JSON structure
 export type Shelter = {
@@ -100,13 +108,19 @@ export default function CityDashboard() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">
-        <Link to="/tokyo" className="hover:underline">東京都</Link>
-        {' / '}
-        <span>{cityName}</span>
-        {' '}
-        ダッシュボード
-      </h1>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink className="text-2xl font-bold" asChild>
+              <Link to="/tokyo">東京都</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-2xl font-bold">{cityName} ダッシュボード</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <Card className="h-full">

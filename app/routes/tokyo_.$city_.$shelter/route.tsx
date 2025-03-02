@@ -7,6 +7,14 @@ import { SuppliesChart, BarChartData } from "@/components/supplies-chart"
 import fs from 'fs'
 import path from 'path'
 import type { Shelter } from "../tokyo_.$city/route"
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb"
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -112,15 +120,25 @@ export default function ShelterDashboard() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">
-        <Link to="/tokyo" className="hover:underline">東京都</Link>
-        {' / '}
-        <Link to={`/tokyo/${params.city}`} className="hover:underline">{cityNameInJapanese}</Link>
-        {' / '}
-        <span>{shelterName}</span>
-        {' '}
-        運営ダッシュボード
-      </h1>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink className="text-2xl font-bold" asChild>
+              <Link to="/tokyo">東京都</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink className="text-2xl font-bold" asChild>
+              <Link to={`/tokyo/${params.city}`}>{cityNameInJapanese}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-2xl font-bold">{shelterName} ダッシュボード</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <EvacueesTable 

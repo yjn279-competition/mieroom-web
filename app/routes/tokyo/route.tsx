@@ -4,6 +4,15 @@ import { ClientOnly } from '@/components/client-only';
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
 import { TokyoMap } from "./tokyoMap.client";
+import { useLoaderData } from "@remix-run/react";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 // Mock data for Tokyo prefecture
 const TOTAL_PEOPLE = 500;
@@ -29,19 +38,22 @@ export const loader: LoaderFunction = async ({ request }) => {
 
 export default function Prefecture() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
+  const geoJsonData = useLoaderData<typeof loader>();
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">
-        <span>東京都</span>
-        {' '}
-        ダッシュボード
-      </h1>
+      <Breadcrumb className="mb-4">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage className="text-2xl font-bold">東京都</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <div className="h-full">
             <ClientOnly>
-              <TokyoMap />
+              <TokyoMap geoJsonData={geoJsonData} />
             </ClientOnly>
           </div>
         </div>

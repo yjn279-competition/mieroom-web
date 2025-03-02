@@ -3,9 +3,8 @@ import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, GeoJSON } from 'react-leaflet';
 import { useEffect } from 'react';
-import { useLoaderData, Link } from "@remix-run/react";
+import { Link } from "@remix-run/react";
 import { Card, CardContent } from "@/components/ui/card";
-import { loader } from "./route";
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -59,8 +58,11 @@ const mapContainerStyle = `
 `;
 
 
-export function TokyoMap() {
-  const geoJsonData = useLoaderData<typeof loader>();
+interface TokyoMapProps {
+  geoJsonData: any;
+}
+
+export function TokyoMap({ geoJsonData }: TokyoMapProps) {
 
   // 背景色のカスタマイズ
   useEffect(() => {
@@ -85,10 +87,7 @@ export function TokyoMap() {
         <div>
           <h3 class="font-bold">${cityName}</h3>
           <div class="mt-3">
-            <a 
-              href="/tokyo/${cityParam}" 
-              class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm inline-block"
-            >
+            <a href="/tokyo/${cityParam}">
               ダッシュボードを表示
             </a>
           </div>
