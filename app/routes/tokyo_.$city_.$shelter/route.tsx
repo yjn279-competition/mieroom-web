@@ -1,10 +1,67 @@
 import { useState } from "react"
-import { useParams } from "@remix-run/react"
+import { useParams, useLoaderData } from "@remix-run/react"
+import type { LoaderFunction } from "@remix-run/node"
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart"
 import { EvacueesTable, EvacueeData } from "@/components/evacuees-table"
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart"
+import fs from 'fs'
+import path from 'path'
+import type { Shelter } from "../tokyo_.$city/route"
 
-// Mock data for shelter level
+// Map of city name in URL to city name in JSON
+const cityNameMap: Record<string, string> = {
+  'chiyoda': '千代田区',
+  'chuo': '中央区',
+  'minato': '港区',
+  'shinjuku': '新宿区',
+  'bunkyo': '文京区',
+  'taito': '台東区',
+  'sumida': '墨田区',
+  'koto': '江東区',
+  'shinagawa': '品川区',
+  'meguro': '目黒区',
+  'ota': '大田区',
+  'setagaya': '世田谷区',
+  'shibuya': '渋谷区',
+  'nakano': '中野区',
+  'suginami': '杉並区',
+  'toshima': '豊島区',
+  'kita': '北区',
+  'arakawa': '荒川区',
+  'itabashi': '板橋区',
+  'nerima': '練馬区',
+  'adachi': '足立区',
+  'katsushika': '葛飾区',
+  'edogawa': '江戸川区',
+};
+
+export const loader: LoaderFunction = async ({ params }) => {
+  const cityParam = params.city || '';
+  const shelterIndex = parseInt(params.shelter || '0', 10);
+  const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
+  
+  // Read the JSON file
+  const jsonFilePath = path.join(process.cwd(), 'data', 'shelters.json');
+  const fileContent = fs.readFileSync(jsonFilePath, 'utf-8');
+  
+  // Parse the JSON
+  const shelters = JSON.parse(fileContent);
+  
+  // Filter shelters by city
+  const filteredShelters = shelters.filter(
+    (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
+  );
+  
+  // Get the specific shelter by index
+  const selectedShelter = filteredShelters[shelterIndex] || null;
+  
+  return { 
+    shelter: selectedShelter,
+    cityNameInJapanese
+  };
+};
+
+// Mock data for shelter level charts and tables
 const TOTAL_PEOPLE = 235
 const evacueesByGender: EvacueeGenderData[] = [
   { name: "男性", value: 47, fill: "var(--color-男性)" },
@@ -48,15 +105,18 @@ export default function ShelterDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
   const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null)
   const params = useParams()
-  const shelterName = params.shelter || "第一避難所"
+  const { shelter, cityNameInJapanese } = useLoaderData<typeof loader>()
+  
+  // Use the shelter name from the data, or a default if not available
+  const shelterName = shelter ? shelter['避難所_施設名称'] : "避難所"
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">{shelterName}運営ダッシュボード</h1>
+      <h1 className="text-2xl font-bold mb-4">{shelterName} 運営ダッシュボード</h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <EvacueesTable 
-            title={`${shelterName}避難者一覧`}
+            title={`避難者一覧`}
             data={evacueeData}
             gender={gender} 
             status={status} 
@@ -65,7 +125,7 @@ export default function ShelterDashboard() {
         <div className="flex flex-col basis-4/12 gap-4 h-full">
           <div className="h-1/2">
             <EvacueesChart 
-              title={`${shelterName}避難者数`}
+              title={`避難者数`}
               data={evacueesByGender}
               totalPeople={TOTAL_PEOPLE}
               setGender={setGender} 
@@ -73,7 +133,7 @@ export default function ShelterDashboard() {
           </div>
           <div className="h-1/2">
             <SuppliesChart 
-              title={`${shelterName}物資不足状況`}
+              title={`物資不足状況`}
               data={suppliesShortageData} 
             />
           </div>
