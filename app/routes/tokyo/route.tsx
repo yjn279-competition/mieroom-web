@@ -32,7 +32,11 @@ export default function Prefecture() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">東京都ダッシュボード</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        <span>東京都</span>
+        {' '}
+        ダッシュボード
+      </h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <div className="h-full">

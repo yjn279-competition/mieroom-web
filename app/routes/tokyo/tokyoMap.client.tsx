@@ -3,9 +3,36 @@ import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, GeoJSON } from 'react-leaflet';
 import { useEffect } from 'react';
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link } from "@remix-run/react";
 import { Card, CardContent } from "@/components/ui/card";
 import { loader } from "./route";
+
+// Map of city name in Japanese to URL parameter
+const cityNameMap: Record<string, string> = {
+  'chiyoda': '千代田区',
+  'chuo': '中央区',
+  'minato': '港区',
+  'shinjuku': '新宿区',
+  'bunkyo': '文京区',
+  'taito': '台東区',
+  'sumida': '墨田区',
+  'koto': '江東区',
+  'shinagawa': '品川区',
+  'meguro': '目黒区',
+  'ota': '大田区',
+  'setagaya': '世田谷区',
+  'shibuya': '渋谷区',
+  'nakano': '中野区',
+  'suginami': '杉並区',
+  'toshima': '豊島区',
+  'kita': '北区',
+  'arakawa': '荒川区',
+  'itabashi': '板橋区',
+  'nerima': '練馬区',
+  'adachi': '足立区',
+  'katsushika': '葛飾区',
+  'edogawa': '江戸川区',
+};
 
 // パラメータ
 const zoom = 10;
@@ -23,6 +50,7 @@ const focusedStyle: PathOptions = {
   fillColor: '#F97316',
   fillOpacity: 1,
 };
+
 
 const mapContainerStyle = `
   .leaflet-container {
@@ -45,11 +73,30 @@ export function TokyoMap() {
     };
   }, []);
 
-
-  // 区市町村をホバーした時のイベント
+  // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
     if (feature.properties && feature.properties.N03_004) {
-      layer.bindPopup(feature.properties.N03_004);
+      // Get city name and parameter
+      const cityName = feature.properties.N03_004;
+      const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+      
+      // ポップアップにリンクを追加
+      const popupContent = `
+        <div>
+          <h3 class="font-bold">${cityName}</h3>
+          <div class="mt-3">
+            <a 
+              href="/tokyo/${cityParam}" 
+              class="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm inline-block"
+            >
+              ダッシュボードを表示
+            </a>
+          </div>
+        </div>
+      `;
+      
+      // Bind popup to layer
+      layer.bindPopup(popupContent);
     }
     
     if (layer instanceof L.Path) {

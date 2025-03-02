@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/card";
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { useParams, useLoaderData } from "@remix-run/react";
+import { useParams, useLoaderData, Link } from "@remix-run/react";
 import type { LoaderFunction } from "@remix-run/node";
 import { ClientOnly } from '@/components/client-only';
 import { CityMap } from "./cityMap.client";
@@ -100,7 +100,13 @@ export default function CityDashboard() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">{cityName}ダッシュボード</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        <Link to="/tokyo" className="hover:underline">東京都</Link>
+        {' / '}
+        <span>{cityName}</span>
+        {' '}
+        ダッシュボード
+      </h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <Card className="h-full">

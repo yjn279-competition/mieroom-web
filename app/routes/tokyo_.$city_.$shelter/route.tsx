@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useParams, useLoaderData } from "@remix-run/react"
+import { useParams, useLoaderData, Link } from "@remix-run/react"
 import type { LoaderFunction } from "@remix-run/node"
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart"
 import { EvacueesTable, EvacueeData } from "@/components/evacuees-table"
@@ -112,7 +112,15 @@ export default function ShelterDashboard() {
 
   return (
     <div className="w-full p-8">
-      <h1 className="text-2xl font-bold mb-4">{shelterName} 運営ダッシュボード</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        <Link to="/tokyo" className="hover:underline">東京都</Link>
+        {' / '}
+        <Link to={`/tokyo/${params.city}`} className="hover:underline">{cityNameInJapanese}</Link>
+        {' / '}
+        <span>{shelterName}</span>
+        {' '}
+        運営ダッシュボード
+      </h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <EvacueesTable 

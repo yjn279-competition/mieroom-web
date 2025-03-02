@@ -1,7 +1,7 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link, useParams } from "@remix-run/react";
 import { loader } from "./route";
 import type { Shelter } from "./route";
 
@@ -21,6 +21,7 @@ const customIcon = new L.Icon({
 
 export function CityMap() {
   const { shelters } = useLoaderData<typeof loader>();
+  const params = useParams();
   
   // Calculate center based on shelters if available
   const center = shelters && shelters.length > 0
@@ -59,6 +60,14 @@ export function CityMap() {
                   {shelter.車椅子使用者対応トイレ === "○" && <li>車椅子使用者対応トイレ</li>}
                   {shelter.その他 && <li>{shelter.その他}</li>}
                 </ul>
+              </div>
+              <div className="mt-3">
+                <Link 
+                  to={`/tokyo/${params.city}/${index}`} 
+                  className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded text-sm inline-block"
+                >
+                  ダッシュボードを表示
+                </Link>
               </div>
             </div>
           </Popup>
