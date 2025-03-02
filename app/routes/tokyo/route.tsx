@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import type { LoaderFunction } from "@remix-run/node";
+import { ClientOnly } from '@/components/client-only';
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
+import { TokyoMap } from "./tokyoMap.client";
 
 // Mock data for Tokyo prefecture
 const TOTAL_PEOPLE = 500;
@@ -18,6 +21,12 @@ const suppliesShortageData: BarChartData[] = [
   { item: "医薬品", shortage: 120, fill: "hsl(var(--chart-5))" },
 ];
 
+export const loader: LoaderFunction = async ({ request }) => {
+  const url = new URL("/data/tokyo.geojson", request.url);
+  const response = await fetch(url.href);
+  return response.json();
+};
+
 export default function Prefecture() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
 
@@ -25,8 +34,12 @@ export default function Prefecture() {
     <div className="w-full p-8">
       <h1 className="text-2xl font-bold mb-4">東京都ダッシュボード</h1>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
-        <div className="basis-8/12 h-full bg-gray-200 rounded">
-          <p className="p-2 text-sm">ここに実際のマップが表示されます。</p>
+        <div className="basis-8/12 h-full">
+          <div className="h-full">
+            <ClientOnly>
+              <TokyoMap />
+            </ClientOnly>
+          </div>
         </div>
         <div className="flex flex-col basis-4/12 gap-4 h-full">
           <div className="h-1/2">
