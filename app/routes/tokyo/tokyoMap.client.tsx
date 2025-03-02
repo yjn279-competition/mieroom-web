@@ -103,15 +103,12 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
         mouseover: (e) => {
           const layer = e.target;
           layer.setStyle(focusedStyle);
+          layer.openPopup(); // Open popup on hover
         },
         mouseout: (e) => {
           const layer = e.target;
           layer.setStyle(defaultStyle);
         },
-        click: (e) => {
-          const layer = e.target;
-          layer.openPopup();
-        }
       });
     }
   };

@@ -46,8 +46,13 @@ export function CityMap() {
           key={`${shelter.避難所_施設名称}-${index}`}
           position={[shelter.緯度, shelter.経度]}
           icon={customIcon}
+          eventHandlers={{
+            mouseover: (e) => {
+              e.target.openPopup();
+            },
+          }}
         >
-          <Popup>
+          <Popup autoPan={false}>
             <div>
               <h3 className="font-bold">{shelter.避難所_施設名称}</h3>
               <p>{shelter.所在地住所}</p>
