@@ -44,7 +44,7 @@ export default function Prefecture() {
         <div className="flex flex-col basis-4/12 gap-4 h-full">
           <div className="h-1/2">
             <EvacueesChart 
-              title="東京都避難者数"
+              title="避難者数"
               data={evacueesByGender}
               totalPeople={TOTAL_PEOPLE}
               setGender={setGender} 
@@ -52,7 +52,7 @@ export default function Prefecture() {
           </div>
           <div className="h-1/2">
             <SuppliesChart 
-              title="東京都物資不足状況"
+              title="物資不足状況"
               data={suppliesShortageData} 
             />
           </div>
