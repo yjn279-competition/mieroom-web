@@ -1,4 +1,3 @@
-import * as React from "react"
 import { Label, Pie, PieChart } from "recharts"
 import {
   Card,
@@ -16,51 +15,64 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-const chartData = [
-  { gender: "男性", evacuees: 275, fill: "var(--color-男性)" },
-  { gender: "女性", evacuees: 280, fill: "var(--color-女性)" },
-  { gender: "その他", evacuees: 87, fill: "var(--color-その他)" },
-]
+export interface EvacueeGenderData {
+  name: string
+  value: number
+  fill: string
+}
 
-const chartConfig = {
-  evacuees: {
-    label: "人",
-  },
-  "男性": {
-    label: "男性",
-    color: "hsl(var(--chart-1))",
-  },
-  "女性": {
-    label: "女性",
-    color: "hsl(var(--chart-2))",
-  },
-  "その他": {
-    label: "その他",
-    color: "hsl(var(--chart-3))",
-  },
-} satisfies ChartConfig
-
-export function OccupancyChart({
-  setGender,
-}: {
+export interface EvacueesChartProps {
+  title?: string
+  description?: string
+  data: EvacueeGenderData[]
+  totalPeople: number
   setGender: (gender: "男性" | "女性" | "その他" | null) => void
-}) {
-  const totalEvacuees = React.useMemo(() => {
-    return chartData.reduce((acc, curr) => acc + curr.evacuees, 0)
-  }, [])
+}
 
-  const handleClick = () => { setGender("男性") }
-  
+export function EvacueesChart({
+  title = "避難者数",
+  description = "避難者数と性別ごとの内訳",
+  data,
+  totalPeople,
+  setGender
+}: EvacueesChartProps) {
+  const chartConfig = {
+    value: {
+      label: "人",
+    },
+    "男性": {
+      label: "男性",
+      color: "hsl(var(--chart-1))",
+    },
+    "女性": {
+      label: "女性",
+      color: "hsl(var(--chart-2))",
+    },
+    "その他": {
+      label: "その他",
+      color: "hsl(var(--chart-3))",
+    },
+  } satisfies ChartConfig
+
+  const totalEvacuees = data.reduce((acc, curr) => acc + curr.value, 0)
+  const endAngle = 360 * (totalEvacuees / totalPeople) + 90
+
+  const handleClick = (data: any) => {
+    if (data && data.name) {
+      setGender(data.name as "男性" | "女性" | "その他")
+    }
+  }
+
   return (
-    <Card className="basis-1/2">
+    <Card className="h-full">
       <CardHeader className="items-center pb-0">
-        <CardTitle>避難者状況</CardTitle>
-        <CardDescription>性別ごとの避難者数</CardDescription>
+        <CardTitle>{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[300px]"
+          className="mx-auto aspect-square max-h-[15rem]"
         >
           <PieChart>
             <ChartTooltip
@@ -68,12 +80,14 @@ export function OccupancyChart({
               content={<ChartTooltipContent hideLabel />}
             />
             <Pie
-              data={chartData}
-              dataKey="evacuees"
-              nameKey="gender"
+              data={data}
+              dataKey="value"
+              nameKey="name"
               innerRadius={60}
               strokeWidth={5}
               onClick={handleClick}
+              startAngle={90}
+              endAngle={endAngle}
             >
               <Label
                 content={({ viewBox }) => {
@@ -90,7 +104,7 @@ export function OccupancyChart({
                           y={viewBox.cy}
                           className="fill-foreground text-3xl font-bold"
                         >
-                          {totalEvacuees.toLocaleString()}
+                          {totalEvacuees}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
@@ -105,10 +119,7 @@ export function OccupancyChart({
                 }}
               />
             </Pie>
-            <ChartLegend
-              content={<ChartLegendContent nameKey="gender" />}
-              className="-translate-y-2 flex-wrap gap-2 [&>*]:basis-1/4 [&>*]:justify-center"
-            />
+            <ChartLegend content={<ChartLegendContent nameKey="name" />} />
           </PieChart>
         </ChartContainer>
       </CardContent>
