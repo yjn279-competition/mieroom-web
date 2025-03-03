@@ -11,8 +11,6 @@ import { useParams, useLoaderData, Link } from "@remix-run/react";
 import type { LoaderFunction } from "@remix-run/node";
 import { ClientOnly } from '@/components/client-only';
 import { CityMap } from "./cityMap.client";
-import fs from 'fs';
-import path from 'path';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,7 +20,25 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// Define the shelter type based on the JSON structure
+// 物資ジャンルのマッピング
+const genreMapping: Record<string, string> = {
+  "食料": "食料",
+  "水": "水",
+  "衛生用品": "衛生用品",
+  "寝具": "毛布",
+  "医薬品": "医薬品",
+};
+
+// チャートの色設定
+const chartColors = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+
+// 避難所の型定義
 export type Shelter = {
   避難所_施設名称: string;
   地方公共団体コード: number;
@@ -65,45 +81,104 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({ params, request }) => {
   const cityParam = params.city || '';
   const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
   
-  // Read the JSON file
-  const jsonFilePath = path.join(process.cwd(), 'data', 'shelters.json');
-  const fileContent = fs.readFileSync(jsonFilePath, 'utf-8');
+  // 避難所データの読み込み
+  const sheltersUrl = new URL("/data/shelters.json", request.url);
+  const sheltersResponse = await fetch(sheltersUrl.href);
+  const shelters = await sheltersResponse.json();
   
-  // Parse the JSON
-  const shelters = JSON.parse(fileContent);
+  // 避難者データの読み込み
+  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
+  const evacueeResponse = await fetch(evacueeUrl.href);
+  const allEvacuees = await evacueeResponse.json();
   
-  // Filter shelters by city
+  // 物資データの読み込み
+  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
+  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
+  const allMaterialsDetail = await materialsDetailResponse.json();
+  
+  // 避難所を市区町村でフィルタリング
   const filteredShelters = shelters.filter(
     (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
   );
   
-  return { shelters: filteredShelters, cityNameInJapanese };
+  // 避難所コードのリストを作成
+  const shelterCodes = filteredShelters.map((shelter: Shelter) => {
+    // 避難所コードを生成（例：S{地方公共団体コード}-{連番}）
+    const cityCode = shelter.地方公共団体コード.toString();
+    return `S${cityCode}-001`; // 実際のコードに合わせて調整が必要
+  });
+  
+  // 避難者を市区町村の避難所でフィルタリング
+  const filteredEvacuees = allEvacuees.filter((evacuee: any) => 
+    shelterCodes.some((code: string) => evacuee.shelter_code.startsWith(code.substring(0, 7)))
+  );
+  
+  // 物資を市区町村の避難所でフィルタリング
+  const filteredMaterials = allMaterialsDetail.filter((material: any) => 
+    shelterCodes.some((code: string) => material.shelter_code.startsWith(code.substring(0, 7)))
+  );
+  
+  // 避難者の性別ごとの集計
+  const genderCounts = {
+    "男性": 0,
+    "女性": 0,
+    "その他": 0
+  };
+  
+  filteredEvacuees.forEach((evacuee: any) => {
+    if (evacuee.gender in genderCounts) {
+      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
+    }
+  });
+  
+  // 物資の不足状況を集計
+  const suppliesShortage: Record<string, number> = {
+    "食料": 0,
+    "水": 0,
+    "衛生用品": 0,
+    "毛布": 0,
+    "医薬品": 0
+  };
+  
+  filteredMaterials.forEach((material: any) => {
+    const genre = material.genre;
+    if (genre in genreMapping) {
+      const mappedGenre = genreMapping[genre];
+      if (mappedGenre in suppliesShortage) {
+        // 物資の不足状況を計算（例：必要量 - 現在量）
+        // ここでは単純に各ジャンルの合計を集計
+        suppliesShortage[mappedGenre] += 80; // 仮の必要量
+      }
+    }
+  });
+  
+  return {
+    shelters: filteredShelters,
+    cityNameInJapanese,
+    evacuees: {
+      total: filteredEvacuees.length,
+      byGender: [
+        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
+        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
+        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
+      ]
+    },
+    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
+      item,
+      shortage,
+      fill: chartColors[index % chartColors.length]
+    }))
+  };
 };
-
-// Mock data for city level
-const TOTAL_PEOPLE = 350;
-const evacueesByGender: EvacueeGenderData[] = [
-  { name: "男性", value: 85, fill: "var(--color-男性)" },
-  { name: "女性", value: 110, fill: "var(--color-女性)" },
-  { name: "その他", value: 55, fill: "var(--color-その他)" },
-];
-
-const suppliesShortageData: BarChartData[] = [
-  { item: "食料", shortage: 300, fill: "hsl(var(--chart-1))" },
-  { item: "水", shortage: 250, fill: "hsl(var(--chart-2))" },
-  { item: "衛生用品", shortage: 180, fill: "hsl(var(--chart-3))" },
-  { item: "毛布", shortage: 120, fill: "hsl(var(--chart-4))" },
-  { item: "医薬品", shortage: 80, fill: "hsl(var(--chart-5))" },
-];
 
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const params = useParams();
-  const { shelters, cityNameInJapanese } = useLoaderData<typeof loader>();
+  const { shelters, cityNameInJapanese, evacuees, supplies } = useLoaderData<typeof loader>();
   const cityName = cityNameInJapanese || params.city || "世田谷区";
 
   return (
@@ -135,15 +210,15 @@ export default function CityDashboard() {
           <div className="h-1/2">
             <EvacueesChart 
               title={`避難者数`}
-              data={evacueesByGender}
-              totalPeople={TOTAL_PEOPLE}
+              data={evacuees.byGender}
+              totalPeople={evacuees.total}
               setGender={setGender} 
             />
           </div>
           <div className="h-1/2">
             <SuppliesChart 
               title={`物資不足状況`}
-              data={suppliesShortageData} 
+              data={supplies} 
             />
           </div>
         </div>

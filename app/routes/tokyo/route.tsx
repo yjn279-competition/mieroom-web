@@ -14,31 +14,95 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// Mock data for Tokyo prefecture
-const TOTAL_PEOPLE = 500;
-const evacueesByGender: EvacueeGenderData[] = [
-  { name: "男性", value: 120, fill: "var(--color-男性)" },
-  { name: "女性", value: 150, fill: "var(--color-女性)" },
-  { name: "その他", value: 80, fill: "var(--color-その他)" },
-];
+// 物資ジャンルのマッピング
+const genreMapping: Record<string, string> = {
+  "食料": "食料",
+  "水": "水",
+  "衛生用品": "衛生用品",
+  "寝具": "毛布",
+  "医薬品": "医薬品",
+};
 
-const suppliesShortageData: BarChartData[] = [
-  { item: "食料", shortage: 500, fill: "hsl(var(--chart-1))" },
-  { item: "水", shortage: 350, fill: "hsl(var(--chart-2))" },
-  { item: "衛生用品", shortage: 280, fill: "hsl(var(--chart-3))" },
-  { item: "毛布", shortage: 200, fill: "hsl(var(--chart-4))" },
-  { item: "医薬品", shortage: 120, fill: "hsl(var(--chart-5))" },
+// チャートの色設定
+const chartColors = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
 ];
 
 export const loader: LoaderFunction = async ({ request }) => {
-  const url = new URL("/data/tokyo.geojson", request.url);
-  const response = await fetch(url.href);
-  return response.json();
+  // GeoJSONデータの読み込み
+  const geoJsonUrl = new URL("/data/tokyo.geojson", request.url);
+  const geoJsonResponse = await fetch(geoJsonUrl.href);
+  const geoJsonData = await geoJsonResponse.json();
+  
+  // 避難者データの読み込み
+  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
+  const evacueeResponse = await fetch(evacueeUrl.href);
+  const evacuees = await evacueeResponse.json();
+  
+  // 物資データの読み込み
+  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
+  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
+  const materialsDetail = await materialsDetailResponse.json();
+  
+  // 避難者の性別ごとの集計
+  const genderCounts = {
+    "男性": 0,
+    "女性": 0,
+    "その他": 0
+  };
+  
+  evacuees.forEach((evacuee: any) => {
+    if (evacuee.gender in genderCounts) {
+      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
+    }
+  });
+  
+  // 物資の不足状況を集計
+  const suppliesShortage: Record<string, number> = {
+    "食料": 0,
+    "水": 0,
+    "衛生用品": 0,
+    "毛布": 0,
+    "医薬品": 0
+  };
+  
+  materialsDetail.forEach((material: any) => {
+    const genre = material.genre;
+    if (genre in genreMapping) {
+      const mappedGenre = genreMapping[genre];
+      if (mappedGenre in suppliesShortage) {
+        // 物資の不足状況を計算（例：必要量 - 現在量）
+        // ここでは単純に各ジャンルの合計を集計
+        suppliesShortage[mappedGenre] += 100; // 仮の必要量
+      }
+    }
+  });
+  
+  return {
+    geoJsonData,
+    evacuees: {
+      total: evacuees.length,
+      byGender: [
+        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
+        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
+        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
+      ]
+    },
+    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
+      item,
+      shortage,
+      fill: chartColors[index % chartColors.length]
+    }))
+  };
 };
 
 export default function Prefecture() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
-  const geoJsonData = useLoaderData<typeof loader>();
+  const { geoJsonData, evacuees, supplies } = useLoaderData<typeof loader>();
 
   return (
     <div className="w-full p-8">
@@ -61,15 +125,15 @@ export default function Prefecture() {
           <div className="h-1/2">
             <EvacueesChart 
               title="避難者数"
-              data={evacueesByGender}
-              totalPeople={TOTAL_PEOPLE}
+              data={evacuees.byGender}
+              totalPeople={evacuees.total}
               setGender={setGender} 
             />
           </div>
           <div className="h-1/2">
             <SuppliesChart 
               title="物資不足状況"
-              data={suppliesShortageData} 
+              data={supplies} 
             />
           </div>
         </div>
