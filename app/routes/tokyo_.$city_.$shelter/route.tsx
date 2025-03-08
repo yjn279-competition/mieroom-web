@@ -325,7 +325,7 @@ export default function ShelterDashboard() {
           </BreadcrumbList>
         </Breadcrumb>
         <Button asChild>
-          <Link to="checkin" className="btn btn-primary" target="_blank" rel="noopener noreferrer">
+          <Link to="qr-code" target="_blank" rel="noopener noreferrer">
             受付QRコードを表示する
             <ExternalLink className="ml-1 h-4 w-4" />
           </Link>
