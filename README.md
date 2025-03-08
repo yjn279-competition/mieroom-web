@@ -21,6 +21,9 @@ pnpm install
 # Install back-end packages
 
 rye sync
+
+# Create local database
+npx wrangler d1 execute mieroom --local --file=./schema.sql
 ```
 
 ### Front-End
@@ -42,11 +45,12 @@ pnpm run dev
 . .venv/bin/activate
 ```
 
-3. 以下のコマンドでサーバーを起動する。
+### Database
+
+3. 以下のコマンドでデータを確認する。
 
 ```shell
-cd src/api
-uvicorn main:app --reload
+npx wrangler d1 execute mieroom --local --command="SELECT * FROM Cities"
 ```
 
 4. [http://127.0.0.1:8000](http://127.0.0.1:8000)でAPIサーバーにアクセスできる。
