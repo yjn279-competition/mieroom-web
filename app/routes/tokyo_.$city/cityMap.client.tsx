@@ -3,7 +3,7 @@ import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { useLoaderData, Link, useParams } from "@remix-run/react";
 import { loader } from "./route";
-import type { Shelter } from "./route";
+import type { Shelter, LoaderData } from "./route";
 
 // Default center for Tokyo
 const defaultCenter: [number, number] = [35.6895, 139.6917];
@@ -20,7 +20,8 @@ const customIcon = new L.Icon({
 });
 
 export function CityMap() {
-  const { shelters } = useLoaderData<typeof loader>();
+  const data = useLoaderData<LoaderData>();
+  const shelters = data.shelters;
   const params = useParams();
   
   // Calculate center based on shelters if available

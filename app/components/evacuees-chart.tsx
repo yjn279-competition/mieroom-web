@@ -102,9 +102,9 @@ export function EvacueesChart({
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-3xl font-bold"
+                          className="fill-foreground text-2xl font-bold"
                         >
-                          {totalEvacuees}
+                          {totalEvacuees.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}

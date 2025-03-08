@@ -20,15 +20,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
-};
-
 // チャートの色設定
 const chartColors = [
   "hsl(var(--chart-1))",
@@ -81,45 +72,117 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader: LoaderFunction = async ({ params, request }) => {
+// ローダーの戻り値の型を定義
+export type LoaderData = {
+  shelters: Shelter[];
+  cityNameInJapanese: string;
+  evacuees: {
+    total: number;
+    byGender: EvacueeGenderData[];
+  };
+  supplies: BarChartData[];
+};
+
+export const loader: LoaderFunction = async ({ params, request }): Promise<LoaderData> => {
   const cityParam = params.city || '';
   const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
+  
+  // 型定義
+  interface Evacuee {
+    my_number: string;
+    family_name: string;
+    given_name: string;
+    gender: string;
+    birth_date: string;
+    address: string;
+    phone_number: string;
+    health_status: string;
+  }
+
+  interface EvacueeShelter {
+    evacuee_id: string;
+    shelter_id: number;
+    created: string;
+    updated: string;
+  }
+
+  interface Supply {
+    supply_id: number;
+    category: string;
+    item_name: string;
+    expiration_date: string;
+    created_datetime: string;
+    updated_datetime: string;
+  }
+
+  interface SupplyShelter {
+    supply_id: number;
+    shelter_id: number;
+    quantity: number;
+    created: string;
+    updated: string;
+  }
   
   // 避難所データの読み込み
   const sheltersUrl = new URL("/data/shelters.json", request.url);
   const sheltersResponse = await fetch(sheltersUrl.href);
-  const shelters = await sheltersResponse.json();
+  const shelters = await sheltersResponse.json() as Shelter[];
   
   // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
+  const evacueeUrl = new URL("/data/evacuees.json", request.url);
   const evacueeResponse = await fetch(evacueeUrl.href);
-  const allEvacuees = await evacueeResponse.json();
+  const allEvacuees = await evacueeResponse.json() as Evacuee[];
+  
+  // 避難者-避難所の関連データの読み込み
+  const evacueesShelterUrl = new URL("/data/evacuee_shelter.json", request.url);
+  const evacueesShelterResponse = await fetch(evacueesShelterUrl.href);
+  const allEvacueesShelter = await evacueesShelterResponse.json() as EvacueeShelter[];
   
   // 物資データの読み込み
-  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
-  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
-  const allMaterialsDetail = await materialsDetailResponse.json();
+  const suppliesUrl = new URL("/data/supplies.json", request.url);
+  const suppliesResponse = await fetch(suppliesUrl.href);
+  const allSupplies = await suppliesResponse.json() as Supply[];
+  
+  // 物資-避難所の関連データの読み込み
+  const suppliesShelterUrl = new URL("/data/supply_shelter.json", request.url);
+  const suppliesShelterResponse = await fetch(suppliesShelterUrl.href);
+  const allSuppliesShelter = await suppliesShelterResponse.json() as SupplyShelter[];
   
   // 避難所を市区町村でフィルタリング
   const filteredShelters = shelters.filter(
     (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
   );
   
-  // 避難所コードのリストを作成
-  const shelterCodes = filteredShelters.map((shelter: Shelter) => {
-    // 避難所コードを生成（例：S{地方公共団体コード}-{連番}）
-    const cityCode = shelter.地方公共団体コード.toString();
-    return `S${cityCode}-001`; // 実際のコードに合わせて調整が必要
+  // 避難所IDのリストを作成
+  const shelterIds = filteredShelters.map((shelter: Shelter) => {
+    // 避難所IDを生成（例：地方公共団体コードを使用）
+    return shelter.地方公共団体コード;
   });
   
-  // 避難者を市区町村の避難所でフィルタリング
-  const filteredEvacuees = allEvacuees.filter((evacuee: any) => 
-    shelterCodes.some((code: string) => evacuee.shelter_code.startsWith(code.substring(0, 7)))
+  // 避難者-避難所の関連をフィルタリング
+  const filteredEvacueesShelter = allEvacueesShelter.filter((es) => 
+    shelterIds.includes(es.shelter_id)
   );
   
-  // 物資を市区町村の避難所でフィルタリング
-  const filteredMaterials = allMaterialsDetail.filter((material: any) => 
-    shelterCodes.some((code: string) => material.shelter_code.startsWith(code.substring(0, 7)))
+  // 避難者IDのリストを作成
+  const evacueeIds = filteredEvacueesShelter.map((es) => es.evacuee_id);
+  
+  // 避難者をフィルタリング
+  const filteredEvacuees = allEvacuees.filter((evacuee) => 
+    evacueeIds.includes(evacuee.my_number)
+  );
+  
+  // 物資-避難所の関連をフィルタリング
+  const filteredSuppliesShelter = allSuppliesShelter.filter((ss) => 
+    shelterIds.includes(ss.shelter_id)
+  );
+  
+  // 物資IDのリストを作成
+  const supplyIds = filteredSuppliesShelter.map((ss) => ss.supply_id);
+  
+  // 物資をフィルタリング
+  const filteredSupplies = allSupplies.filter((supply) => 
+    supplyIds.includes(supply.supply_id)
   );
   
   // 避難者の性別ごとの集計
@@ -129,31 +192,49 @@ export const loader: LoaderFunction = async ({ params, request }) => {
     "その他": 0
   };
   
-  filteredEvacuees.forEach((evacuee: any) => {
-    if (evacuee.gender in genderCounts) {
-      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
+  filteredEvacuees.forEach((evacuee) => {
+    if (evacuee.gender === "M") {
+      genderCounts["男性"]++;
+    } else if (evacuee.gender === "F") {
+      genderCounts["女性"]++;
+    } else {
+      genderCounts["その他"]++;
     }
   });
   
   // 物資の不足状況を集計
   const suppliesShortage: Record<string, number> = {
+    "飲料": 0,
     "食料": 0,
-    "水": 0,
     "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
+    "医薬品": 0,
+    "生活必需品": 0,
+    "その他": 0,
   };
   
-  filteredMaterials.forEach((material: any) => {
-    const genre = material.genre;
-    if (genre in genreMapping) {
-      const mappedGenre = genreMapping[genre];
-      if (mappedGenre in suppliesShortage) {
-        // 物資の不足状況を計算（例：必要量 - 現在量）
-        // ここでは単純に各ジャンルの合計を集計
-        suppliesShortage[mappedGenre] += 80; // 仮の必要量
-      }
+  // カテゴリごとの物資数を集計
+  const categoryQuantities: Record<string, number> = {};
+  
+  // 各物資の数量を集計
+  filteredSupplies.forEach((supply) => {
+    const category = supply.category;
+    // 避難所ごとの物資数量を集計
+    const supplyQuantities = filteredSuppliesShelter
+      .filter((ss) => ss.supply_id === supply.supply_id)
+      .reduce((total: number, ss) => total + ss.quantity, 0);
+    
+    if (!(category in categoryQuantities)) {
+      categoryQuantities[category] = 0;
     }
+    
+    categoryQuantities[category] += supplyQuantities;
+  });
+  
+  // 必要量と現在量の差を計算（仮の必要量を設定）
+  Object.keys(suppliesShortage).forEach(category => {
+    const requiredAmount = 5000; // 仮の必要量
+    const currentAmount = categoryQuantities[category] || 0;
+    suppliesShortage[category] = Math.max(0, requiredAmount - currentAmount);
   });
   
   return {
@@ -162,9 +243,9 @@ export const loader: LoaderFunction = async ({ params, request }) => {
     evacuees: {
       total: filteredEvacuees.length,
       byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
-        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
-        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
+        { name: "男性", value: genderCounts["男性"], fill: "hsl(var(--chart-1))" },
+        { name: "女性", value: genderCounts["女性"], fill: "hsl(var(--chart-2))" },
+        { name: "その他", value: genderCounts["その他"], fill: "hsl(var(--chart-3))" }
       ]
     },
     supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
@@ -178,8 +259,11 @@ export const loader: LoaderFunction = async ({ params, request }) => {
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const params = useParams();
-  const { shelters, cityNameInJapanese, evacuees, supplies } = useLoaderData<typeof loader>();
+  const { shelters, cityNameInJapanese, evacuees, supplies } = useLoaderData<LoaderData>();
   const cityName = cityNameInJapanese || params.city || "世田谷区";
+  
+  console.log("Evacuees data:", evacuees);
+  console.log("Evacuees by gender:", evacuees.byGender);
 
   return (
     <div className="w-full p-8">
