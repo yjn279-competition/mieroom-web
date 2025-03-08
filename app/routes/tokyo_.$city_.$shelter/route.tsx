@@ -1,6 +1,8 @@
 import { useState } from "react"
 import { useParams, useLoaderData, Link } from "@remix-run/react"
 import type { LoaderFunction } from "@remix-run/node"
+import { ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart"
 import { EvacueesTable, EvacueeData } from "@/components/evacuees-table"
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart"
@@ -303,30 +305,31 @@ export default function ShelterDashboard() {
   return (
     <div className="w-full p-8">
       <div className="flex justify-between items-center mb-4">
-        <div>
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink className="text-2xl font-bold" asChild>
-                  <Link to="/tokyo">東京都</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbLink className="text-2xl font-bold" asChild>
-                  <Link to={`/tokyo/${params.city}`}>{cityNameInJapanese}</Link>
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-2xl font-bold">{shelterName} ダッシュボード</BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-        </div>
-        <div>
-          <Link to="checkin" className="btn btn-primary">避難所受付</Link>
-        </div>
+        <Breadcrumb>
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to="/tokyo">東京都</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to={`/tokyo/${params.city}`}>{cityNameInJapanese}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">{shelterName} ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <Button asChild>
+          <Link to="checkin" className="btn btn-primary" target="_blank" rel="noopener noreferrer">
+            受付QRコードを表示する
+            <ExternalLink className="ml-1 h-4 w-4" />
+          </Link>
+        </Button>
       </div>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
