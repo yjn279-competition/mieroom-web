@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
@@ -12,17 +9,17 @@ datasource db {
 }
 
 model City {
-  code       String @id @map("id")
+  id         String @id @map("code")
   name       String
   prefecture String
 
-  @@map("Cities")
+  @@map("cities")
 }
 
 model Shelter {
-  code             String           @id @map("id")
+  id               String           @id @map("code")
   name             String
-  cityCode         String           @map("city_id")
+  cityId           String           @map("city_code")
   cityName         String           @map("city_name")
   prefecture       String
   address          String
@@ -35,15 +32,15 @@ model Shelter {
   otherFacilities  String?          @map("other_facilities")
   status           String
   created          DateTime         @default(now())
-  updated          DateTime         @updatedAt
+  updated          DateTime         @default(now()) @updatedAt
   evacuees         ShelterEvacuee[]
   supplies         ShelterSupply[]
 
-  @@map("Shelters")
+  @@map("shelters")
 }
 
 model Evacuee {
-  myNumber     String           @id @map("id")
+  id           String           @id @map("my_number")
   familyName   String           @map("family_name")
   givenName    String           @map("given_name")
   gender       String
@@ -53,22 +50,22 @@ model Evacuee {
   healthStatus String?          @map("health_status")
   specialNotes String?          @map("special_notes")
   created      DateTime         @default(now())
-  updated      DateTime         @updatedAt
+  updated      DateTime         @default(now()) @updatedAt
   shelters     ShelterEvacuee[]
 
-  @@map("Evacuees")
+  @@map("evacuees")
 }
 
 model ShelterEvacuee {
-  shelterCode String   @map("shelter_id")
-  myNumber    String   @map("evacuee_id")
-  created     DateTime @default(now())
-  updated     DateTime @updatedAt
-  shelter     Shelter  @relation(fields: [shelterCode], references: [code])
-  evacuee     Evacuee  @relation(fields: [myNumber], references: [myNumber])
+  shelterId String   @map("shelter_code")
+  evacueeId String   @map("my_number")
+  created   DateTime @default(now())
+  updated   DateTime @default(now()) @updatedAt
+  shelter   Shelter  @relation(fields: [shelterId], references: [id])
+  evacuee   Evacuee  @relation(fields: [evacueeId], references: [id])
 
-  @@id([shelterCode, myNumber])
-  @@map("ShelterEvacuee")
+  @@id([shelterId, evacueeId])
+  @@map("shelter_evacuees")
 }
 
 model Supply {
@@ -77,21 +74,21 @@ model Supply {
   category       String?
   expirationDate String?         @map("expiration_date")
   created        DateTime        @default(now())
-  updated        DateTime        @updatedAt
+  updated        DateTime        @default(now()) @updatedAt
   shelters       ShelterSupply[]
 
-  @@map("Supplies")
+  @@map("supplies")
 }
 
 model ShelterSupply {
-  shelterCode String   @map("shelter_id")
-  supplyId    String   @map("supply_id")
-  quantity    Int
-  created     DateTime
-  updated     DateTime
-  shelter     Shelter  @relation(fields: [shelterCode], references: [code])
-  supply      Supply   @relation(fields: [supplyId], references: [id])
+  shelterId String   @map("shelter_code")
+  supplyId  String   @map("supply_id")
+  quantity  Int
+  created   DateTime @default(now())
+  updated   DateTime @default(now()) @updatedAt
+  shelter   Shelter  @relation(fields: [shelterId], references: [id])
+  supply    Supply   @relation(fields: [supplyId], references: [id])
 
-  @@id([shelterCode, supplyId])
-  @@map("ShelterSupply")
+  @@id([shelterId, supplyId])
+  @@map("shelter_supplies")
 }
