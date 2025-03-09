@@ -26,7 +26,8 @@
       {
         "binding": "DB",
         "database_name": "mieroom",
-        "database_id": "9227853a-bc0b-45c8-9be3-44609012b143"
+        "database_id": "9227853a-bc0b-45c8-9be3-44609012b143",
+        "migrations_dir": "./prisma/migrations"
       }
     ]
 

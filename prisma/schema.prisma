@@ -10,3 +10,88 @@ datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+model City {
+  code       String @id @map("id")
+  name       String
+  prefecture String
+
+  @@map("Cities")
+}
+
+model Shelter {
+  code             String           @id @map("id")
+  name             String
+  cityCode         String           @map("city_id")
+  cityName         String           @map("city_name")
+  prefecture       String
+  address          String
+  latitude         Float
+  longitude        Float
+  elevatorInfo     String?          @map("elevator_info")
+  slope            String?
+  brailleBlocks    String?          @map("braille_blocks")
+  wheelchairToilet String?          @map("wheelchair_toilet")
+  otherFacilities  String?          @map("other_facilities")
+  status           String
+  created          DateTime         @default(now())
+  updated          DateTime         @updatedAt
+  evacuees         ShelterEvacuee[]
+  supplies         ShelterSupply[]
+
+  @@map("Shelters")
+}
+
+model Evacuee {
+  myNumber     String           @id @map("id")
+  familyName   String           @map("family_name")
+  givenName    String           @map("given_name")
+  gender       String
+  birthDate    String           @map("birth_date")
+  address      String
+  phoneNumber  String           @map("phone_number")
+  healthStatus String?          @map("health_status")
+  specialNotes String?          @map("special_notes")
+  created      DateTime         @default(now())
+  updated      DateTime         @updatedAt
+  shelters     ShelterEvacuee[]
+
+  @@map("Evacuees")
+}
+
+model ShelterEvacuee {
+  shelterCode String   @map("shelter_id")
+  myNumber    String   @map("evacuee_id")
+  created     DateTime @default(now())
+  updated     DateTime @updatedAt
+  shelter     Shelter  @relation(fields: [shelterCode], references: [code])
+  evacuee     Evacuee  @relation(fields: [myNumber], references: [myNumber])
+
+  @@id([shelterCode, myNumber])
+  @@map("ShelterEvacuee")
+}
+
+model Supply {
+  id             String          @id
+  name           String
+  category       String?
+  expirationDate String?         @map("expiration_date")
+  created        DateTime        @default(now())
+  updated        DateTime        @updatedAt
+  shelters       ShelterSupply[]
+
+  @@map("Supplies")
+}
+
+model ShelterSupply {
+  shelterCode String   @map("shelter_id")
+  supplyId    String   @map("supply_id")
+  quantity    Int
+  created     DateTime
+  updated     DateTime
+  shelter     Shelter  @relation(fields: [shelterCode], references: [code])
+  supply      Supply   @relation(fields: [supplyId], references: [id])
+
+  @@id([shelterCode, supplyId])
+  @@map("ShelterSupply")
+}

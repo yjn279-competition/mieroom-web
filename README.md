@@ -23,7 +23,7 @@ pnpm install
 rye sync
 
 # Create local database
-npx wrangler d1 execute mieroom --local --file=./schema.sql
+pnpm wrangler d1 migrations apply mieroom --local
 ```
 
 ### Front-End
@@ -47,10 +47,11 @@ pnpm run dev
 
 ### Database
 
-3. 以下のコマンドでデータを確認する。
+3. 以下のコマンドでローカルのDBを確認する。
 
 ```shell
-npx wrangler d1 execute mieroom --local --command="SELECT * FROM Cities"
+pnpx wrangler d1 execute mieroom --local --command="PRAGMA table_list"
+pnpx wrangler d1 execute mieroom --local --command="SELECT * FROM Cities"
 ```
 
 4. [http://127.0.0.1:8000](http://127.0.0.1:8000)でAPIサーバーにアクセスできる。
