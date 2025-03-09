@@ -76,12 +76,13 @@ async function main() {
 
   // Delete existing data
   console.log('Deleting existing data...');
+  await executeD1Command('DELETE FROM shelter_evacuees;');
+  await executeD1Command('DELETE FROM shelter_supplies;');
   await executeD1Command('DELETE FROM cities;');
   await executeD1Command('DELETE FROM shelters;');
   await executeD1Command('DELETE FROM evacuees;');
-  await executeD1Command('DELETE FROM shelter_evacuees;');
   await executeD1Command('DELETE FROM supplies;');
-  await executeD1Command('DELETE FROM shelter_supplies;');
+  
   
   // Read shelters data
   console.log('Reading shelters data...');
