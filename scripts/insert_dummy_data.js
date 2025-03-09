@@ -1,7 +1,6 @@
 import fs from 'fs';
 import { faker } from '@faker-js/faker/locale/ja';
 import { v4 as uuidv4 } from 'uuid';
-import { execSync } from 'child_process';
 import util from 'util';
 import { exec } from 'child_process';
 
