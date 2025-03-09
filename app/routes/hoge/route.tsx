@@ -1,23 +1,24 @@
-import type { LoaderFunction } from "@remix-run/node";
+import type { LoaderFunction } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
 
-type LoaderData = {
-  text: string;
-};
-
-export const loader: LoaderFunction = async ({ request }): Promise<LoaderData> => {
-  return {
-    text: "Hello, world!",
-  };
+export const loader: LoaderFunction = async ({ context, params }) => {
+  const { env, cf, ctx } = context.cloudflare;
+  const { results } = await env.DB.prepare("SELECT * FROM cities").all();
+  return { results };
 };
 
 export default function Prefecture() {
-  const { text } = useLoaderData<LoaderData>();
+  const { results } = useLoaderData<typeof loader>();
 
   return (
     <>
       <h1>Hoge</h1>
-      <p>{text}</p>
+      {results.map((result) => (
+        <div key={result.city_code}>
+          <h2>{result.name}</h2>
+          <p>{result.prefecture}</p>
+        </div>
+      ))}
     </>
   )
 }
