@@ -12,8 +12,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-import { TokyoMap } from "./tokyoMap.client";
 import { Button } from '@/components/ui/button';
+import { Link } from '@remix-run/react';
+import { TokyoMap } from "./tokyoMap.client";
 
 export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   // DB接続情報
@@ -57,7 +58,7 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
     supplies: supplyRanking.map((item) => ({
       key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
       value: 470000 - (item._sum.quantity ?? 0),
-      fill: "hsl(var(--chart-3))",
+      fill: "hsl(var(--chart-2))",
     }))
   };
 };
@@ -68,8 +69,15 @@ export default function Prefecture() {
 
   return (
     <div className="w-full p-8">
-      <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">
-        <Button className="h-full rounded-lg text-2xl font-bold tracking-wide p-2 mr-2">mieroom</Button>
+      <div className="flex bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
         <Breadcrumb className="p-2">
           <BreadcrumbList>
             <BreadcrumbItem>

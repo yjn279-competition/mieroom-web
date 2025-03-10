@@ -46,7 +46,7 @@ const defaultStyle: PathOptions = {
 };
 
 const focusedStyle: PathOptions = {
-  fillColor: '#F97316',
+  fillColor: '#FB923C',
   fillOpacity: 1,
 };
 
