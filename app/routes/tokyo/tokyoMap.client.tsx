@@ -5,6 +5,7 @@ import { MapContainer, GeoJSON } from 'react-leaflet';
 import { useEffect } from 'react';
 import { Link } from "@remix-run/react";
 import { Card, CardContent } from "@/components/ui/card";
+import { useNavigate } from "@remix-run/react";
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -63,6 +64,7 @@ interface TokyoMapProps {
 }
 
 export function TokyoMap({ geoJsonData }: TokyoMapProps) {
+  const navigate = useNavigate();
 
   // 背景色のカスタマイズ
   useEffect(() => {
@@ -77,26 +79,28 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
 
   // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
-    if (feature.properties && feature.properties.N03_004) {
-      // Get city name and parameter
-      const cityName = feature.properties.N03_004;
-      const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
-      
-      // ポップアップにリンクを追加
-      const popupContent = `
-        <div>
-          <h3 class="font-bold">${cityName}</h3>
-          <div class="mt-3">
-            <a href="/tokyo/${cityParam}">
-              ダッシュボードを表示
-            </a>
-          </div>
-        </div>
-      `;
-      
-      // Bind popup to layer
-      layer.bindPopup(popupContent);
+    if (!feature.properties || !feature.properties.N03_004) {
+      return null;
     }
+
+    // Get city name and parameter
+    const cityName = feature.properties.N03_004;
+    const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+    
+    // ポップアップにリンクを追加
+    const popupContent = `
+      <div>
+        <h3 class="font-bold">${cityName}</h3>
+        <div class="mt-3">
+          <a href="/tokyo/${cityParam}">
+            ダッシュボードを表示
+          </a>
+        </div>
+      </div>
+    `;
+    
+    // Bind popup to layer
+    layer.bindPopup(popupContent);
     
     if (layer instanceof L.Path) {
       layer.on({
@@ -109,6 +113,12 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
           const layer = e.target;
           layer.setStyle(defaultStyle);
         },
+        click: (e) => {
+          navigate({
+            pathname: "",
+            search: `?cityParam=${cityParam}`,
+          });
+        }
       });
     }
   };

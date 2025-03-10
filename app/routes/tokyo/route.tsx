@@ -17,6 +17,10 @@ import { Link } from '@remix-run/react';
 import { TokyoMap } from "./tokyoMap.client";
 
 export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+  // パラメータ取得
+  const url = new URL(request.url);
+  const cityParam = url.searchParams.get("cityParam");
+
   // DB接続情報
   const { env } = context.cloudflare;
   const adapter = new PrismaD1(env.DB);
