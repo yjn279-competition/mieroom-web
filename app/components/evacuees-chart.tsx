@@ -72,7 +72,7 @@ export function EvacueesChart({
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[17rem]"
+          className="mx-auto aspect-square max-h-[15rem]"
         >
           <PieChart>
             <ChartTooltip
