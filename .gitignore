@@ -9,6 +9,7 @@ node_modules
 
 # Cloudflare
 .wrangler
+wrangler.jsonc
 
 # Misc
 .DS_Store

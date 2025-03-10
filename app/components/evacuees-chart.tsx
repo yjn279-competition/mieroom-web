@@ -65,9 +65,9 @@ export function EvacueesChart({
 
   return (
     <Card className="h-full">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="flex flex-row space-x-2 space-y-0 pb-0">
         <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer
@@ -102,9 +102,9 @@ export function EvacueesChart({
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-3xl font-bold"
+                          className="fill-foreground text-2xl font-bold"
                         >
-                          {totalEvacuees}
+                          {totalEvacuees.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}

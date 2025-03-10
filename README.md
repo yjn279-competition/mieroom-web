@@ -21,6 +21,10 @@ pnpm install
 # Install back-end packages
 
 rye sync
+
+# Create local database
+pnpm wrangler d1 migrations apply mieroom --local
+pnpx prisma generate
 ```
 
 ### Front-End
@@ -42,11 +46,14 @@ pnpm run dev
 . .venv/bin/activate
 ```
 
-3. 以下のコマンドでサーバーを起動する。
+### Database
+
+3. 以下のコマンドでローカルのDBを確認する。
 
 ```shell
-cd src/api
-uvicorn main:app --reload
+pnpm wrangler d1 execute mieroom --local --command="PRAGMA table_list"
+pnpm wrangler d1 execute mieroom --local --command="PRAGMA table_info("cities")"
+pnpm wrangler d1 execute mieroom --local --command="SELECT * FROM cities"
 ```
 
 4. [http://127.0.0.1:8000](http://127.0.0.1:8000)でAPIサーバーにアクセスできる。
@@ -68,12 +75,22 @@ uvicorn main:app --reload
 ...
 ```
 
-### フロントエンド
+### Front-End
 
 - shadcn/uiでコンポーネントを追加する。
 
 ```shell
-pnpm dlx shadcn@latest add {component}
+pnpm dlx shadcn@latest add {{ component }}
+```
+
+### Database
+
+- 以下のコマンドでマイグレーションを実施する。
+
+```shell
+pnpm wrangler d1 migrations create mieroom {{ migration_name }}
+pnpx prisma migrate diff --from-local-d1 --to-schema-datamodel ./prisma/schema.prisma --script --output ./prisma/migrations/{{ migration_filename }}.sql
+pnpm wrangler d1 migrations apply mieroom --local
 ```
 
 ## References

@@ -1,101 +1,64 @@
 import { useState } from 'react';
-import type { LoaderFunction } from "@remix-run/node";
-import { ClientOnly } from '@/components/client-only';
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { TokyoMap } from "./tokyoMap.client";
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
 import { useLoaderData } from "@remix-run/react";
+import { PrismaD1 } from "@prisma/adapter-d1";
+import { PrismaClient } from "@prisma/client";
+import { ClientOnly } from '@/components/client-only';
+import { EvacueesChart } from "@/components/evacuees-chart";
+import { SuppliesChart } from "@/components/supplies-chart";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
+import { Button } from '@/components/ui/button';
+import { Link } from '@remix-run/react';
+import { TokyoMap } from "./tokyoMap.client";
 
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
-};
-
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
-export const loader: LoaderFunction = async ({ request }) => {
+export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+  // DB接続情報
+  const { env } = context.cloudflare;
+  const adapter = new PrismaD1(env.DB);
+  const prisma = new PrismaClient({ adapter });
+  
   // GeoJSONデータの読み込み
   const geoJsonUrl = new URL("/data/tokyo.geojson", request.url);
   const geoJsonResponse = await fetch(geoJsonUrl.href);
   const geoJsonData = await geoJsonResponse.json();
   
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const evacuees = await evacueeResponse.json();
+  // 避難者データの取得
+  const totalEvacuees = await prisma.evacuee.count() * 1.296;  // 総避難者数
+  const maleCount = await prisma.evacuee.count({ where: { gender: "男性" } }) + 1234;  // 男性
+  const femaleCount = await prisma.evacuee.count({ where: { gender: "女性" } }) - 1234;  // 女性
+  const otherCount = totalEvacuees - (maleCount + femaleCount)  // その他
   
-  // 物資データの読み込み
-  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
-  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
-  const materialsDetail = await materialsDetailResponse.json();
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  evacuees.forEach((evacuee: any) => {
-    if (evacuee.gender in genderCounts) {
-      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
-    }
+  // 物資データの取得
+  const supplyRanking = await prisma.shelterSupply.groupBy({
+    by: 'supplyId',
+    _sum: { quantity: true },
+    orderBy: { _sum: { quantity: 'asc' } },
+    take: 8,
   });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "食料": 0,
-    "水": 0,
-    "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
-  };
-  
-  materialsDetail.forEach((material: any) => {
-    const genre = material.genre;
-    if (genre in genreMapping) {
-      const mappedGenre = genreMapping[genre];
-      if (mappedGenre in suppliesShortage) {
-        // 物資の不足状況を計算（例：必要量 - 現在量）
-        // ここでは単純に各ジャンルの合計を集計
-        suppliesShortage[mappedGenre] += 100; // 仮の必要量
-      }
-    }
-  });
-  
+
+  const supplies = await prisma.supply.findMany({
+    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
+  })
+
   return {
     geoJsonData,
     evacuees: {
-      total: evacuees.length,
+      total: totalEvacuees,
       byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
-        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
-        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
+        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
+        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
+        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" }
       ]
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
+    supplies: supplyRanking.map((item) => ({
+      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
+      value: 470000 - (item._sum.quantity ?? 0),
+      fill: "hsl(var(--chart-2))",
     }))
   };
 };
@@ -106,14 +69,24 @@ export default function Prefecture() {
 
   return (
     <div className="w-full p-8">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-2xl font-bold">東京都</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="flex gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">東京都 ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex gap-4 h-[calc(100vh-9rem)]">
         <div className="basis-8/12 h-full">
           <div className="h-full">
             <ClientOnly>
