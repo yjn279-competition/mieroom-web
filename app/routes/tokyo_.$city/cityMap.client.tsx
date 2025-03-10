@@ -27,8 +27,8 @@ export function CityMap() {
   // Calculate center based on shelters if available
   const center = shelters && shelters.length > 0
     ? [
-        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.緯度, 0) / shelters.length,
-        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.経度, 0) / shelters.length
+        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.latitude, 0) / shelters.length,
+        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.longitude, 0) / shelters.length
       ] as [number, number]
     : defaultCenter;
 
@@ -44,8 +44,8 @@ export function CityMap() {
       />
       {shelters && shelters.map((shelter: Shelter, index: number) => (
         <Marker 
-          key={`${shelter.避難所_施設名称}-${index}`}
-          position={[shelter.緯度, shelter.経度]}
+          key={`${shelter.name}-${index}`}
+          position={[shelter.latitude, shelter.longitude]}
           icon={customIcon}
           eventHandlers={{
             mouseover: (e) => {
@@ -55,16 +55,16 @@ export function CityMap() {
         >
           <Popup autoPan={false}>
             <div>
-              <h3 className="font-bold">{shelter.避難所_施設名称}</h3>
-              <p>{shelter.所在地住所}</p>
+              <h3 className="font-bold">{shelter.name}</h3>
+              <p>{shelter.address}</p>
               <div className="mt-2">
                 <p className="text-sm">バリアフリー設備:</p>
                 <ul className="text-sm list-disc pl-5">
-                  {shelter["エレベーター有/避難スペースが１階"] === "○" && <li>エレベーター有/避難スペースが１階</li>}
-                  {shelter.スロープ等 === "○" && <li>スロープ等</li>}
-                  {shelter.点字ブロック === "○" && <li>点字ブロック</li>}
-                  {shelter.車椅子使用者対応トイレ === "○" && <li>車椅子使用者対応トイレ</li>}
-                  {shelter.その他 && <li>{shelter.その他}</li>}
+                  {shelter.elevatorInfo === "○" && <li>エレベーター有/避難スペースが１階</li>}
+                  {shelter.slope === "○" && <li>スロープ等</li>}
+                  {shelter.brailleBlocks === "○" && <li>点字ブロック</li>}
+                  {shelter.wheelchairToilet === "○" && <li>車椅子使用者対応トイレ</li>}
+                  {shelter.otherFacilities && <li>{shelter.otherFacilities}</li>}
                 </ul>
               </div>
               <div className="mt-3">
