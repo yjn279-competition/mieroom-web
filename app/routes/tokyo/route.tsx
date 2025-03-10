@@ -32,10 +32,10 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   const geoJsonData = await geoJsonResponse.json();
   
   // 避難者データの取得
-  const totalEvacuees = await prisma.evacuee.count() * 1.296;  // 総避難者数
-  const maleCount = await prisma.evacuee.count({ where: { gender: "男性" } }) + 1234;  // 男性
-  const femaleCount = await prisma.evacuee.count({ where: { gender: "女性" } }) - 1234;  // 女性
-  const otherCount = totalEvacuees - (maleCount + femaleCount)  // その他
+  const totalEvacuees = await prisma.evacuee.count() * 1.296;
+  const maleCount = await prisma.evacuee.count({ where: { gender: "男性" } }) + 1234;
+  const femaleCount = await prisma.evacuee.count({ where: { gender: "女性" } }) - 1234
+  const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データの取得
   const supplyRanking = await prisma.shelterSupply.groupBy({
@@ -56,7 +56,7 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
       byGender: [
         { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
         { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" }
+        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" },
       ]
     },
     supplies: supplyRanking.map((item) => ({
