@@ -5,6 +5,7 @@
 - [Volta](https://docs.volta.sh/guide/getting-started)：JavaScriptのツールマネージャー
   - [pnpmを利用するため、環境変数に `VOLTA_FEATURE_PNPM=1` を設定しておく。](https://docs.volta.sh/advanced/pnpm)
 - [Rye](https://rye.astral.sh/)：Pythonのパッケージマネージャー
+- `wrangler.jsonc` ：管理者から共有する。
 
 ## Getting Started
 
@@ -15,7 +16,7 @@ cd mieroom-web
 
 # Install front-end packages
 
-volta install node
+volta install pnpm
 pnpm install
 
 # Install back-end packages
@@ -24,6 +25,7 @@ rye sync
 
 # Create local database
 pnpm wrangler d1 migrations apply mieroom --local
+pnpm seed
 pnpx prisma generate
 ```
 
@@ -32,7 +34,7 @@ pnpx prisma generate
 1. 以下のコマンドでサーバーを起動する。
 
 ```shell
-pnpm run dev
+pnpm dev
 ```
 
 2. [http://localhost:5173](http://localhost:5173)にアクセスする。
