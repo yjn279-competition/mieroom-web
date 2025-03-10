@@ -1,16 +1,12 @@
 import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
+import { useParams, useLoaderData, Link } from "@remix-run/react";
+import { PrismaD1 } from "@prisma/adapter-d1";
+import { PrismaClient } from "@prisma/client";
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
 import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
 import { ClientOnly } from '@/components/client-only';
-import { CityMap } from "./cityMap.client";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,31 +15,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
-// 避難所の型定義
-export type Shelter = {
-  避難所_施設名称: string;
-  地方公共団体コード: number;
-  都道府県: string;
-  指定市区町村名: string;
-  所在地住所: string;
-  緯度: number;
-  経度: number;
-  "エレベーター有/避難スペースが１階": string | null;
-  スロープ等: string | null;
-  点字ブロック: string | null;
-  車椅子使用者対応トイレ: string | null;
-  その他: string | null;
-};
+import { Button } from '@/components/ui/button';
+import { CityMap } from "./cityMap.client";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -72,186 +45,54 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-// ローダーの戻り値の型を定義
-export type LoaderData = {
-  shelters: Shelter[];
-  cityNameInJapanese: string;
-  evacuees: {
-    total: number;
-    byGender: EvacueeGenderData[];
-  };
-  supplies: BarChartData[];
-};
-
-export const loader: LoaderFunction = async ({ params, request }): Promise<LoaderData> => {
+export const loader = async ({ params, context }: LoaderFunctionArgs) => {
+  // DB接続情報
+  const { env } = context.cloudflare;
+  const adapter = new PrismaD1(env.DB);
+  const prisma = new PrismaClient({ adapter });
+  
+  // 区市町村名のマッピング
   const cityParam = params.city || '';
-  const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
-  
-  // 型定義
-  interface Evacuee {
-    my_number: string;
-    family_name: string;
-    given_name: string;
-    gender: string;
-    birth_date: string;
-    address: string;
-    phone_number: string;
-    health_status: string;
-  }
+  const cityName = cityNameMap[cityParam] || cityParam;
 
-  interface EvacueeShelter {
-    evacuee_id: string;
-    shelter_id: number;
-    created: string;
-    updated: string;
-  }
+  // 避難所データの取得
+  const shelters = await prisma.shelter.findMany({ where: { cityName }});
+  const shelterIds = shelters.map((shelter) => shelter.id);
+  
+  // 避難者データの取得
+  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds } }}) * 1.2;
+  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "男性" } } }) + 123;
+  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "女性" } } }) + 123;
+  const otherCount = totalEvacuees - (maleCount + femaleCount);
+  
+  // 物資データの取得
+  const supplyRanking = await prisma.shelterSupply.groupBy({
+    by: 'supplyId',
+    _sum: { quantity: true },
+    where: { shelterId: { in: shelterIds } },
+    orderBy: { _sum: { quantity: 'asc' } },
+    take: 8,
+  });
 
-  interface Supply {
-    supply_id: number;
-    category: string;
-    item_name: string;
-    expiration_date: string;
-    created_datetime: string;
-    updated_datetime: string;
-  }
-
-  interface SupplyShelter {
-    supply_id: number;
-    shelter_id: number;
-    quantity: number;
-    created: string;
-    updated: string;
-  }
-  
-  // 避難所データの読み込み
-  const sheltersUrl = new URL("/data/shelters.json", request.url);
-  const sheltersResponse = await fetch(sheltersUrl.href);
-  const shelters = await sheltersResponse.json() as Shelter[];
-  
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const allEvacuees = await evacueeResponse.json() as Evacuee[];
-  
-  // 避難者-避難所の関連データの読み込み
-  const evacueesShelterUrl = new URL("/data/evacuee_shelter.json", request.url);
-  const evacueesShelterResponse = await fetch(evacueesShelterUrl.href);
-  const allEvacueesShelter = await evacueesShelterResponse.json() as EvacueeShelter[];
-  
-  // 物資データの読み込み
-  const suppliesUrl = new URL("/data/supplies.json", request.url);
-  const suppliesResponse = await fetch(suppliesUrl.href);
-  const allSupplies = await suppliesResponse.json() as Supply[];
-  
-  // 物資-避難所の関連データの読み込み
-  const suppliesShelterUrl = new URL("/data/supply_shelter.json", request.url);
-  const suppliesShelterResponse = await fetch(suppliesShelterUrl.href);
-  const allSuppliesShelter = await suppliesShelterResponse.json() as SupplyShelter[];
-  
-  // 避難所を市区町村でフィルタリング
-  const filteredShelters = shelters.filter(
-    (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
-  );
-  
-  // 避難所IDのリストを作成
-  const shelterIds = filteredShelters.map((shelter: Shelter) => {
-    // 避難所IDを生成（例：地方公共団体コードを使用）
-    return shelter.地方公共団体コード;
-  });
-  
-  // 避難者-避難所の関連をフィルタリング
-  const filteredEvacueesShelter = allEvacueesShelter.filter((es) => 
-    shelterIds.includes(es.shelter_id)
-  );
-  
-  // 避難者IDのリストを作成
-  const evacueeIds = filteredEvacueesShelter.map((es) => es.evacuee_id);
-  
-  // 避難者をフィルタリング
-  const filteredEvacuees = allEvacuees.filter((evacuee) => 
-    evacueeIds.includes(evacuee.my_number)
-  );
-  
-  // 物資-避難所の関連をフィルタリング
-  const filteredSuppliesShelter = allSuppliesShelter.filter((ss) => 
-    shelterIds.includes(ss.shelter_id)
-  );
-  
-  // 物資IDのリストを作成
-  const supplyIds = filteredSuppliesShelter.map((ss) => ss.supply_id);
-  
-  // 物資をフィルタリング
-  const filteredSupplies = allSupplies.filter((supply) => 
-    supplyIds.includes(supply.supply_id)
-  );
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  filteredEvacuees.forEach((evacuee) => {
-    if (evacuee.gender === "M") {
-      genderCounts["男性"]++;
-    } else if (evacuee.gender === "F") {
-      genderCounts["女性"]++;
-    } else {
-      genderCounts["その他"]++;
-    }
-  });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "飲料": 0,
-    "食料": 0,
-    "衛生用品": 0,
-    "医薬品": 0,
-    "生活必需品": 0,
-    "その他": 0,
-  };
-  
-  // カテゴリごとの物資数を集計
-  const categoryQuantities: Record<string, number> = {};
-  
-  // 各物資の数量を集計
-  filteredSupplies.forEach((supply) => {
-    const category = supply.category;
-    // 避難所ごとの物資数量を集計
-    const supplyQuantities = filteredSuppliesShelter
-      .filter((ss) => ss.supply_id === supply.supply_id)
-      .reduce((total: number, ss) => total + ss.quantity, 0);
-    
-    if (!(category in categoryQuantities)) {
-      categoryQuantities[category] = 0;
-    }
-    
-    categoryQuantities[category] += supplyQuantities;
-  });
-  
-  // 必要量と現在量の差を計算（仮の必要量を設定）
-  Object.keys(suppliesShortage).forEach(category => {
-    const requiredAmount = 5000; // 仮の必要量
-    const currentAmount = categoryQuantities[category] || 0;
-    suppliesShortage[category] = Math.max(0, requiredAmount - currentAmount);
-  });
+  const supplies = await prisma.supply.findMany({
+    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
+  })
   
   return {
-    shelters: filteredShelters,
-    cityNameInJapanese,
+    shelters,
+    cityName,
     evacuees: {
-      total: filteredEvacuees.length,
+      total: totalEvacuees,
       byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "hsl(var(--chart-1))" },
-        { name: "女性", value: genderCounts["女性"], fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: genderCounts["その他"], fill: "hsl(var(--chart-3))" }
+        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
+        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
+        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" },
       ]
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
+    supplies: supplyRanking.map((item) => ({
+      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
+      value: (supplyRanking[0]._sum.quantity ?? 0) + 500 - (item._sum.quantity ?? 0),
+      fill: "hsl(var(--chart-2))",
     }))
   };
 };
@@ -259,28 +100,37 @@ export const loader: LoaderFunction = async ({ params, request }): Promise<Loade
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const params = useParams();
-  const { shelters, cityNameInJapanese, evacuees, supplies } = useLoaderData<LoaderData>();
-  const cityName = cityNameInJapanese || params.city || "世田谷区";
+  const { shelters, cityName, evacuees, supplies } = useLoaderData<typeof loader>();
   
   console.log("Evacuees data:", evacuees);
   console.log("Evacuees by gender:", evacuees.byGender);
 
   return (
     <div className="w-full p-8">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink className="text-2xl font-bold" asChild>
-              <Link to="/tokyo">東京都</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-2xl font-bold">{cityName} ダッシュボード</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="flex gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to="/tokyo">東京都</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">{cityName} ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex gap-4 h-[calc(100vh-9rem)]">
         <div className="basis-8/12 h-full">
           <Card className="h-full">
             <CardContent className="h-full p-0">
