@@ -1,12 +1,12 @@
-import { useState } from "react"
-import { useParams, useLoaderData, Link } from "@remix-run/react"
-import type { LoaderFunction } from "@remix-run/node"
 import { ExternalLink } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart"
-import { EvacueesTable, EvacueeData } from "@/components/evacuees-table"
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart"
-import type { Shelter } from "../tokyo_.$city/route"
+import { useState } from "react"
+import type { LoaderFunctionArgs } from "@remix-run/cloudflare"
+import { useParams, useLoaderData, Link } from "@remix-run/react"
+import { PrismaD1 } from "@prisma/adapter-d1"
+import { PrismaClient } from "@prisma/client"
+import { EvacueesChart } from "@/components/evacuees-chart"
+import { EvacueesTable } from "@/components/evacuees-table"
+import { SuppliesChart } from "@/components/supplies-chart"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -15,24 +15,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
-};
-
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
+import { Button } from "@/components/ui/button"
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -61,193 +44,43 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-// ローダーの戻り値の型を定義
-type LoaderData = {
-  shelter: Shelter | null;
-  cityNameInJapanese: string;
-  evacuees: {
-    total: number;
-    byGender: EvacueeGenderData[];
-    data: EvacueeData[];
-  };
-  supplies: BarChartData[];
-};
-
-export const loader: LoaderFunction = async ({ params, request }): Promise<LoaderData> => {
+export const loader = async ({ params, context }: LoaderFunctionArgs) => {
+  // DB接続情報
+  const { env } = context.cloudflare;
+  const adapter = new PrismaD1(env.DB);
+  const prisma = new PrismaClient({ adapter });
+  
+  // 区市町村名のマッピング
   const cityParam = params.city || '';
-  const shelterIndex = parseInt(params.shelter || '0', 10);
-  const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
+  const shelterId = params.shelter || '0';
+  const cityName = cityNameMap[cityParam] || cityParam;
   
-  // 型定義
-  interface Evacuee {
-    my_number: string;
-    family_name: string;
-    given_name: string;
-    gender: string;
-    birth_date: string;
-    address: string;
-    phone_number: string;
-    health_status: string;
-  }
-
-  interface EvacueeShelter {
-    evacuee_id: string;
-    shelter_id: number;
-    created: string;
-    updated: string;
-  }
-
-  interface Supply {
-    supply_id: number;
-    category: string;
-    item_name: string;
-    expiration_date: string;
-    created_datetime: string;
-    updated_datetime: string;
-  }
-
-  interface SupplyShelter {
-    supply_id: number;
-    shelter_id: number;
-    quantity: number;
-    created: string;
-    updated: string;
-  }
+  // 避難所データの取得
+  const shelter = await prisma.shelter.findFirst({ where: { id: shelterId }});
   
-  // 避難所データの読み込み
-  const sheltersUrl = new URL("/data/shelters.json", request.url);
-  const sheltersResponse = await fetch(sheltersUrl.href);
-  const shelters = await sheltersResponse.json() as Shelter[];
+  // 避難者データの取得
+  const evacuees = await prisma.evacuee.findMany({ where: { shelters: { some: { shelterId }}}});
+  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId }}) * 1.2;
+  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "男性" } } }) + 123;
+  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "女性" } } }) + 123;
+  const otherCount = totalEvacuees - (maleCount + femaleCount);
   
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const allEvacuees = await evacueeResponse.json() as Evacuee[];
-  
-  // 避難者-避難所の関連データの読み込み
-  const evacueesShelterUrl = new URL("/data/evacuee_shelter.json", request.url);
-  const evacueesShelterResponse = await fetch(evacueesShelterUrl.href);
-  const allEvacueesShelter = await evacueesShelterResponse.json() as EvacueeShelter[];
-  
-  // 物資データの読み込み
-  const suppliesUrl = new URL("/data/supplies.json", request.url);
-  const suppliesResponse = await fetch(suppliesUrl.href);
-  const allSupplies = await suppliesResponse.json() as Supply[];
-  
-  // 物資-避難所の関連データの読み込み
-  const suppliesShelterUrl = new URL("/data/supply_shelter.json", request.url);
-  const suppliesShelterResponse = await fetch(suppliesShelterUrl.href);
-  const allSuppliesShelter = await suppliesShelterResponse.json() as SupplyShelter[];
-  
-  // 避難所を市区町村でフィルタリング
-  const filteredShelters = shelters.filter(
-    (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
-  );
-  
-  // 特定の避難所を取得
-  const selectedShelter = filteredShelters[shelterIndex] || null;
-  
-  if (!selectedShelter) {
-    return { 
-      shelter: null,
-      cityNameInJapanese,
-      evacuees: {
-        total: 0,
-        byGender: [],
-        data: []
-      },
-      supplies: []
-    };
-  }
-  
-  // 避難所IDを取得
-  const shelterId = selectedShelter.地方公共団体コード;
-  
-  // 避難者-避難所の関連をフィルタリング
-  const filteredEvacueesShelter = allEvacueesShelter.filter((es) => 
-    es.shelter_id === shelterId
-  );
-  
-  // 避難者IDのリストを作成
-  const evacueeIds = filteredEvacueesShelter.map((es) => es.evacuee_id);
-  
-  // 避難者をフィルタリング
-  const filteredEvacuees = allEvacuees.filter((evacuee) => 
-    evacueeIds.includes(evacuee.my_number)
-  );
-  
-  // 物資-避難所の関連をフィルタリング
-  const filteredSuppliesShelter = allSuppliesShelter.filter((ss) => 
-    ss.shelter_id === shelterId
-  );
-  
-  // 物資IDのリストを作成
-  const supplyIds = filteredSuppliesShelter.map((ss) => ss.supply_id);
-  
-  // 物資をフィルタリング
-  const filteredSupplies = allSupplies.filter((supply) => 
-    supplyIds.includes(supply.supply_id)
-  );
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  filteredEvacuees.forEach((evacuee) => {
-    if (evacuee.gender === "M") {
-      genderCounts["男性"]++;
-    } else if (evacuee.gender === "F") {
-      genderCounts["女性"]++;
-    } else {
-      genderCounts["その他"]++;
-    }
+  // 物資データを取得
+  const supplyRanking = await prisma.shelterSupply.groupBy({
+    by: 'supplyId',
+    _sum: { quantity: true },
+    where: { shelterId },
+    orderBy: { _sum: { quantity: 'asc' } },
+    take: 8,
   });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "食料": 0,
-    "水": 0,
-    "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
-  };
-  
-  // カテゴリごとの物資数を集計
-  const categoryQuantities: Record<string, number> = {};
-  
-  // 各物資の数量を集計
-  filteredSupplies.forEach((supply) => {
-    const category = supply.category;
-    if (category in genreMapping) {
-      const mappedCategory = genreMapping[category];
-      
-      // 避難所ごとの物資数量を集計
-      const supplyQuantities = filteredSuppliesShelter
-        .filter((ss) => ss.supply_id === supply.supply_id)
-        .reduce((total: number, ss) => total + ss.quantity, 0);
-      
-      if (!(mappedCategory in categoryQuantities)) {
-        categoryQuantities[mappedCategory] = 0;
-      }
-      
-      categoryQuantities[mappedCategory] += supplyQuantities;
-    }
-  });
-  
-  // 必要量と現在量の差を計算（仮の必要量を設定）
-  Object.keys(suppliesShortage).forEach(category => {
-    const requiredAmount = 1000; // 仮の必要量
-    const currentAmount = categoryQuantities[category] || 0;
-    suppliesShortage[category] = Math.max(0, requiredAmount - currentAmount);
-  });
+
+  const supplies = await prisma.supply.findMany({
+    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
+  })
   
   // 避難者データをテーブル表示用に整形
-  const evacueeTableData = filteredEvacuees.map((evacuee) => {
-    // 年齢を計算（生年月日から）
-    const birthDate = new Date(evacuee.birth_date);
+  const evacueeTableData = evacuees.map((evacuee) => {
+    const birthDate = new Date(evacuee.birthDate);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
@@ -257,14 +90,14 @@ export const loader: LoaderFunction = async ({ params, request }): Promise<Loade
     
     // 健康状態を日本語に変換
     let status = "無事";
-    if (evacuee.health_status === "要注意") {
+    if (evacuee.healthStatus === "要注意") {
       status = "軽傷";
-    } else if (evacuee.health_status === "要治療") {
+    } else if (evacuee.healthStatus === "要治療") {
       status = "重体";
     }
     
     return {
-      name: `${evacuee.family_name} ${evacuee.given_name}`,
+      name: `${evacuee.familyName} ${evacuee.givenName}`,
       age,
       gender: evacuee.gender === "M" ? "男性" : evacuee.gender === "F" ? "女性" : "その他",
       status,
@@ -272,40 +105,48 @@ export const loader: LoaderFunction = async ({ params, request }): Promise<Loade
       plannedTime: '2:00'  // 仮のデータ
     };
   });
-  
+
   return { 
-    shelter: selectedShelter,
-    cityNameInJapanese,
+    shelter,
+    cityName,
     evacuees: {
-      total: filteredEvacuees.length,
+      total: totalEvacuees,
       byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "hsl(var(--chart-1))" },
-        { name: "女性", value: genderCounts["女性"], fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: genderCounts["その他"], fill: "hsl(var(--chart-3))" }
+        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
+        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
+        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" }
       ],
       data: evacueeTableData
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
+    supplies: supplyRanking.map((item) => ({
+      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
+      value: (supplyRanking[0]._sum.quantity ?? 0) + 500 - (item._sum.quantity ?? 0),
+      fill: "hsl(var(--chart-2))",
     }))
   };
 };
 
 export default function ShelterDashboard() {
-  const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
-  const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null)
-  const params = useParams()
-  const { shelter, cityNameInJapanese, evacuees, supplies } = useLoaderData<LoaderData>()
+  const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
+  const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null);
+  const params = useParams();
+  const { shelter, cityName, evacuees, supplies } = useLoaderData<typeof loader>();
   
   // 避難所名を取得
-  const shelterName = shelter ? shelter['避難所_施設名称'] : "避難所"
+  const shelterName = shelter ? shelter.name : "避難所"
 
   return (
     <div className="w-full p-8">
-      <div className="flex justify-between items-center mb-4">
-        <Breadcrumb>
+      <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink className="text-2xl font-bold" asChild>
@@ -315,7 +156,7 @@ export default function ShelterDashboard() {
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbLink className="text-2xl font-bold" asChild>
-                <Link to={`/tokyo/${params.city}`}>{cityNameInJapanese}</Link>
+                <Link to={`/tokyo/${params.city}`}>{cityName}</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
             <BreadcrumbSeparator />
@@ -324,12 +165,14 @@ export default function ShelterDashboard() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <Button asChild>
-          <Link to="qr-code" target="_blank" rel="noopener noreferrer">
-            受付QRコードを表示する
-            <ExternalLink className="ml-1 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="ml-auto flex items-center mr-1">
+          <Button asChild>
+            <Link to="qr-code" target="_blank" rel="noopener noreferrer">
+              受付QRコードを表示する
+              <ExternalLink className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
