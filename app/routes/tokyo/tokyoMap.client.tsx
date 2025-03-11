@@ -3,9 +3,8 @@ import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, GeoJSON } from 'react-leaflet';
 import { useEffect } from 'react';
-import { Link } from "@remix-run/react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useNavigate } from "@remix-run/react";
+import { useSearchParams } from "@remix-run/react";
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -64,7 +63,7 @@ interface TokyoMapProps {
 }
 
 export function TokyoMap({ geoJsonData }: TokyoMapProps) {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // 背景色のカスタマイズ
   useEffect(() => {
@@ -114,10 +113,13 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
           layer.setStyle(defaultStyle);
         },
         click: (e) => {
-          navigate({
-            pathname: "",
-            search: `?cityParam=${cityParam}`,
-          });
+          const layer = e.target;
+          const feature = layer.feature;
+          if (feature && feature.properties && feature.properties.N03_004) {
+            const cityName = feature.properties.N03_004;
+            const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+            setSearchParams({ cityParam });
+          }
         }
       });
     }
