@@ -16,10 +16,38 @@ import { Button } from '@/components/ui/button';
 import { Link } from '@remix-run/react';
 import { TokyoMap } from "./tokyoMap.client";
 
+// Map of city name in URL to city name in JSON
+const cityNameMap: Record<string, string> = {
+  'chiyoda': '千代田区',
+  'chuo': '中央区',
+  'minato': '港区',
+  'shinjuku': '新宿区',
+  'bunkyo': '文京区',
+  'taito': '台東区',
+  'sumida': '墨田区',
+  'koto': '江東区',
+  'shinagawa': '品川区',
+  'meguro': '目黒区',
+  'ota': '大田区',
+  'setagaya': '世田谷区',
+  'shibuya': '渋谷区',
+  'nakano': '中野区',
+  'suginami': '杉並区',
+  'toshima': '豊島区',
+  'kita': '北区',
+  'arakawa': '荒川区',
+  'itabashi': '板橋区',
+  'nerima': '練馬区',
+  'adachi': '足立区',
+  'katsushika': '葛飾区',
+  'edogawa': '江戸川区',
+};
+
 export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   // パラメータ取得
   const url = new URL(request.url);
-  const cityParam = url.searchParams.get("cityParam");
+  const cityParam = url.searchParams.get("cityParam") || '';
+  const cityName = cityNameMap[cityParam] || cityParam;
 
   // DB接続情報
   const { env } = context.cloudflare;
@@ -32,9 +60,10 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   const geoJsonData = await geoJsonResponse.json();
   
   // 避難者データの取得
-  const totalEvacuees = await prisma.evacuee.count() * 1.296;
-  const maleCount = await prisma.evacuee.count({ where: { gender: "男性" } }) + 1234;
-  const femaleCount = await prisma.evacuee.count({ where: { gender: "女性" } }) - 1234
+  const whereCondition = cityParam === '' ? {} : { shelter: { cityName } };
+  const totalEvacuees = await prisma.shelterEvacuee.count({ where: whereCondition }) * 1.2 + 12;
+  const maleCount = await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "男性" } } }) + 123;
+  const femaleCount = await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "女性" } } }) - 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データの取得
