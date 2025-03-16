@@ -3,7 +3,39 @@ import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { useLoaderData, Link, useParams } from "@remix-run/react";
 import { loader } from "./route";
-import type { Shelter, LoaderData } from "./route";
+
+// Define the Shelter type based on the data structure
+export interface Shelter {
+  id: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  elevatorInfo?: string;
+  slope?: string;
+  brailleBlocks?: string;
+  wheelchairToilet?: string;
+  otherFacilities?: string;
+}
+
+// Define the LoaderData type based on the loader's return structure
+interface LoaderData {
+  shelters: Shelter[];
+  cityName: string;
+  evacuees: {
+    total: number;
+    byGender: Array<{
+      name: string;
+      value: number;
+      fill: string;
+    }>;
+  };
+  supplies: Array<{
+    key: string;
+    value: number;
+    fill: string;
+  }>;
+}
 
 // Default center for Tokyo
 const defaultCenter: [number, number] = [35.6895, 139.6917];
@@ -68,7 +100,7 @@ export function CityMap() {
                 </ul>
               </div>
               <div className="mt-3">
-                <Link to={`/tokyo/${params.city}/${index}`}>
+                <Link to={`/tokyo/${params.city}/${shelter.id}`}>
                   ダッシュボードを表示
                 </Link>
               </div>

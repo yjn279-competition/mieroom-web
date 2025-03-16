@@ -2,9 +2,11 @@ import L from 'leaflet';
 import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, GeoJSON } from 'react-leaflet';
-import { useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { useEffect, useState } from 'react';
 import { useSearchParams } from "@remix-run/react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Link } from '@remix-run/react';
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -50,20 +52,24 @@ const focusedStyle: PathOptions = {
   fillOpacity: 1,
 };
 
-
 const mapContainerStyle = `
   .leaflet-container {
     background: transparent;
   }
 `;
 
-
 interface TokyoMapProps {
   geoJsonData: any;
 }
 
+interface HoveredCity {
+  name: string;
+  param: string;
+}
+
 export function TokyoMap({ geoJsonData }: TokyoMapProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [hoveredCity, setHoveredCity] = useState<HoveredCity | null>(null);
 
   // 背景色のカスタマイズ
   useEffect(() => {
@@ -82,35 +88,19 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
       return null;
     }
 
-    // Get city name and parameter
-    const cityName = feature.properties.N03_004;
-    const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
-    
-    // ポップアップにリンクを追加
-    const popupContent = `
-      <div>
-        <h3 class="font-bold">${cityName}</h3>
-        <div class="mt-3">
-          <a href="/tokyo/${cityParam}">
-            ダッシュボードを表示
-          </a>
-        </div>
-      </div>
-    `;
-    
-    // Bind popup to layer
-    layer.bindPopup(popupContent);
-    
     if (layer instanceof L.Path) {
       layer.on({
         mouseover: (e) => {
           const layer = e.target;
           layer.setStyle(focusedStyle);
-          layer.openPopup(); // Open popup on hover
+          const cityName = feature.properties.N03_004;
+          const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+          setHoveredCity({ name: cityName, param: cityParam });
         },
         mouseout: (e) => {
           const layer = e.target;
           layer.setStyle(defaultStyle);
+          setHoveredCity(null);
         },
         click: (e) => {
           const layer = e.target;
@@ -118,15 +108,37 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
           if (feature && feature.properties && feature.properties.N03_004) {
             const cityName = feature.properties.N03_004;
             const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
-            setSearchParams({ cityParam });
+
+            const currentCityParam = searchParams.get('cityParam') || '';
+            if (currentCityParam === cityParam) {
+              searchParams.delete('cityParam');
+            } else {
+              setSearchParams({ cityParam });
+            }
           }
-        }
+        },
       });
     }
   };
 
+  const cityParam = searchParams.get("cityParam") || '';
+  const cityName = cityNameMap[cityParam] || cityParam;
+
   return (
-    <Card className="h-full">
+    <Card className="relative h-full">
+      {cityName && (
+        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+          <h3 className="font-bold text-3xl">{cityName}</h3>
+          <Button asChild variant="secondary">
+            <Link to={`/tokyo/${cityParam}`}>ダッシュボードを表示する</Link>
+          </Button>
+        </div>
+      )}
+      {cityName === '' && hoveredCity && (
+        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+          <h3 className="font-bold text-3xl">{hoveredCity.name}</h3>
+        </div>
+      )}
       <CardContent className="h-full p-0">
         <MapContainer
           center={center}
