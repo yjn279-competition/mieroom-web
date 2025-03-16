@@ -135,11 +135,8 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
         </div>
       )}
       {cityName === '' && hoveredCity && (
-        <div className="absolute top-4 left-4 z-[1000] bg-white/80 backdrop-blur p-4 rounded-lg">
-          <h3 className="font-bold text-lg mb-2">{hoveredCity.name}</h3>
-          <Button asChild variant="secondary" size="sm">
-            <a href={`/tokyo/${hoveredCity.param}`}>ダッシュボードを表示</a>
-          </Button>
+        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+          <h3 className="font-bold text-3xl">{hoveredCity.name}</h3>
         </div>
       )}
       <CardContent className="h-full p-0">

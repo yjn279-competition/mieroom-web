@@ -60,9 +60,9 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
   
   // 避難者データの取得
   const evacuees = await prisma.evacuee.findMany({ where: { shelters: { some: { shelterId }}}});
-  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId }}) * 1.2;
-  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "男性" } } }) + 123;
-  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "女性" } } }) + 123;
+  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId }}) * 1.2 + 1;
+  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "男性" } } }) + 12;
+  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "女性" } } }) - 12;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データを取得
@@ -101,8 +101,8 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
       age,
       gender: evacuee.gender === "M" ? "男性" : evacuee.gender === "F" ? "女性" : "その他",
       status,
-      elapsedTime: '2:30', // 仮のデータ
-      plannedTime: '2:00'  // 仮のデータ
+      elapsedTime: `${Math.floor(Math.random() * 48)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
+      plannedTime: `${Math.floor(Math.random() * 48)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`
     };
   });
 
@@ -120,7 +120,7 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
     },
     supplies: supplyRanking.map((item) => ({
       key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: (supplyRanking[0]._sum.quantity ?? 0) + 500 - (item._sum.quantity ?? 0),
+      value: (supplyRanking[0]._sum.quantity ?? 0) + 100 - (item._sum.quantity ?? 0),
       fill: "hsl(var(--chart-2))",
     }))
   };
@@ -129,11 +129,47 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
 export default function ShelterDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null);
+  const [sortKey, setSortKey] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const params = useParams();
   const { shelter, cityName, evacuees, supplies } = useLoaderData<typeof loader>();
   
   // 避難所名を取得
   const shelterName = shelter ? shelter.name : "避難所"
+  
+  // ソート関数
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      // 同じカラムをクリックした場合は昇順/降順を切り替え
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // 異なるカラムをクリックした場合は新しいカラムで昇順にソート
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+  
+  // データのソート
+  const sortedData = [...evacuees.data].sort((a, b) => {
+    // TypeScriptエラーを回避するためにインデックスシグネチャを持つ型として扱う
+    const aRecord = a as Record<string, string | number>;
+    const bRecord = b as Record<string, string | number>;
+    
+    const valueA = aRecord[sortKey];
+    const valueB = bRecord[sortKey];
+    
+    // 文字列か数値かによってソート方法を変える
+    if (typeof valueA === "string" && typeof valueB === "string") {
+      return sortDirection === "asc" 
+        ? valueA.localeCompare(valueB, "ja") 
+        : valueB.localeCompare(valueA, "ja");
+    } else {
+      // 数値の場合
+      return sortDirection === "asc" 
+        ? (valueA as number) - (valueB as number) 
+        : (valueB as number) - (valueA as number);
+    }
+  });
 
   return (
     <div className="w-full p-8">
@@ -178,9 +214,12 @@ export default function ShelterDashboard() {
         <div className="basis-8/12 h-full">
           <EvacueesTable 
             title={`避難者一覧`}
-            data={evacuees.data}
+            data={sortedData}
             gender={gender} 
-            status={status} 
+            status={status}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={handleSort}
           />
         </div>
         <div className="flex flex-col basis-4/12 gap-4 h-full">
