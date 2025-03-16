@@ -55,7 +55,7 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   const prisma = new PrismaClient({ adapter });
   
   // GeoJSONデータの読み込み
-  const geoJsonUrl = new URL("/data/tokyo.geojson", request.url);
+  const geoJsonUrl = new URL("/public/data/tokyo.geojson", request.url);
   const geoJsonResponse = await fetch(geoJsonUrl.href);
   const geoJsonData = await geoJsonResponse.json();
   
