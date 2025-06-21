@@ -135,7 +135,7 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
   return (
     <Card className="relative h-full">
       {cityName && (
-        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
           <h3 className="font-bold text-3xl">{cityName}</h3>
           <Button asChild variant="secondary">
             <Link to={`/tokyo/${cityParam}`}>ダッシュボードを表示する</Link>
@@ -143,7 +143,7 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
         </div>
       )}
       {cityName === '' && hoveredCity && (
-        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
           <h3 className="font-bold text-3xl">{hoveredCity.name}</h3>
         </div>
       )}

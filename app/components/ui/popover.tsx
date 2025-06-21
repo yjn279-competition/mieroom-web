@@ -68,7 +68,7 @@ const PopoverContent = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "absolute z-50 mt-1 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80",
+      "absolute z-50 mt-1 min-w-32 overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-80",
       className
     )}
     {...props}
