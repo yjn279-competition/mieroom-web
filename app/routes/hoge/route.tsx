@@ -1,5 +1,5 @@
-import type { LoaderFunction } from "@remix-run/cloudflare";
-import { useLoaderData } from "@remix-run/react";
+import type { LoaderFunction } from "react-router";
+import { useLoaderData } from "react-router";
 
 export const loader: LoaderFunction = async ({ context, params }) => {
   const { env, cf, ctx } = context.cloudflare;

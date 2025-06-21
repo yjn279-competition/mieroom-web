@@ -3,10 +3,10 @@ import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { GeoJSON, MapContainer } from 'react-leaflet';
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from "@remix-run/react";
+import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from '@remix-run/react';
+import { Link } from 'react-router';
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {

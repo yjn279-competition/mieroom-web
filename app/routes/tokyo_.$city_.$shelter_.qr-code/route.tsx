@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
+import { useParams, useLoaderData, Link } from "react-router";
+import type { LoaderFunction } from "react-router";
 import { QRCodeSVG } from "qrcode.react";
 import { v4 as uuidv4 } from "uuid";
 import type { Shelter } from "../tokyo_.$city/route";

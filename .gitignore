@@ -1,11 +1,12 @@
 # JavaScript
-node_modules
+node_modules/
 
-# Remix
+# React Router
 /.cache
 /build
 .env
 .dev.vars
+.react-router/
 
 # Cloudflare
 .wrangler

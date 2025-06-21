@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
+import type { LoaderFunctionArgs } from "react-router";
+import { useParams, useLoaderData, Link } from "react-router";
 import { PrismaD1 } from "@prisma/adapter-d1";
 import { PrismaClient } from "@prisma/client";
 import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
@@ -60,9 +60,9 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
   const shelterIds = shelters.map((shelter) => shelter.id);
   
   // 避難者データの取得
-  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds } }}) * 1.2;
-  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "男性" } } }) + 123;
-  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "女性" } } }) + 123;
+  const totalEvacuees = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds } }})) * 1.2;
+  const maleCount = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "男性" } } })) + 123;
+  const femaleCount = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "女性" } } })) + 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データの取得
