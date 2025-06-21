@@ -38,7 +38,7 @@ export function SuppliesChart({
 
   return (
     <Card className="h-full">
-      <CardHeader className="flex flex-row space-x-2 space-y-0 pb-3">
+      <CardHeader className="flex flex-row space-x-2 space-y-0">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>

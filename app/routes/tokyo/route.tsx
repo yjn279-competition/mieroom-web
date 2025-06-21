@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
-import { eq, sql, inArray } from "drizzle-orm";
+import { eq, sql, inArray, asc } from "drizzle-orm";
 import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
 import { ClientOnly } from '~/components/client-only';
 import { EvacueesChart } from "~/components/evacuees-chart";
@@ -14,6 +13,7 @@ import {
 } from "~/components/ui/breadcrumb";
 import { Button } from '~/components/ui/button';
 import { Link } from "react-router";
+import type { Route } from "./+types/route";
 import { TokyoMap } from "./tokyoMap.client";
 
 // Map of city name in URL to city name in JSON
@@ -43,111 +43,61 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+export async function loader({ context, request }: Route.LoaderArgs) {
   // パラメータ取得
   const url = new URL(request.url);
   const cityParam = url.searchParams.get("cityParam") || '';
   const cityName = cityNameMap[cityParam] || cityParam;
 
-  // Drizzle DB
+  // DB接続情報
   const db = context.db;
   
   // GeoJSON データの読み込み
-  let geoJsonData: unknown;
-
-  if (context.bucket) {
-    // R2 バケットから直接取得
-    const obj = await context.bucket.get("tokyo.geojson");
-    if (!obj) {
-      throw new Response("GeoJSON not found in R2", { status: 404 });
-    }
-    geoJsonData = await obj.json();
-  } else {
-    // ローカル開発環境: public/data/tokyo.geojson から取得
-    const localUrl = new URL("/data/tokyo.geojson", request.url);
-    const response = await fetch(localUrl.href);
-    geoJsonData = await response.json();
+  const object = await context.bucket.get("tokyo.geojson");
+  if (!object) {
+    throw new Response("GeoJSON not found in R2", { status: 404 });
   }
+  const geoJsonData = await object.json();
   
-  //===============================
-  // 避難者データ取得
-  //===============================
-  // 集計クエリで男女別カウントを取得
-  let evacueeAggQuery = db
+  // 避難者データの取得
+  const genderCounts = await db
     .select({
-      gender: evacuees.gender,
-      cnt: sql<number>`count(*)`.as("cnt"),
+      name: evacuees.gender,
+      value: sql`count(*)`.mapWith(Number),
+      fill: sql`case 
+        when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+        when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+        else 'var(--chart-3)'
+      end`.mapWith(String),
     })
     .from(shelterEvacuees)
+    .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
     .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
-    .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode));
-
-  if (cityParam !== '') {
-    evacueeAggQuery = evacueeAggQuery.where(eq(shelters.cityName, cityName));
-  }
-
-  const evacueeAgg = await evacueeAggQuery.groupBy(evacuees.gender).all();
-
-  const counts: Record<string, number> = {
-    男性: 0,
-    女性: 0,
-    その他: 0,
-  };
-
-  let totalEvacuees = 0;
-  for (const row of evacueeAgg) {
-    counts[row.gender] = row.cnt;
-    totalEvacuees += row.cnt;
-  }
-
-  // デモ用の補正値（元実装の +-123 を踏襲）
-  const maleCount = counts["男性"] + 123;
-  const femaleCount = counts["女性"] - 123;
-  const otherCount = totalEvacuees - (maleCount + femaleCount);
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
+    .groupBy(evacuees.gender);
   
-  //===============================
-  // 物資データ取得
-  //===============================
-  let supplyAggQuery = db
+  // 物資データの取得
+  const supplyShortages = await db
     .select({
-      supplyId: shelterSupplies.supplyId,
-      quantity: sql<number>`sum(${shelterSupplies.quantity})`.as("quantity"),
+      key: supplies.name,
+      value: sql`470000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
     })
     .from(shelterSupplies)
-    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode));
-
-  if (cityParam !== '') {
-    supplyAggQuery = supplyAggQuery.where(eq(shelters.cityName, cityName));
-  }
-
-  const supplyAgg = await supplyAggQuery
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
     .groupBy(shelterSupplies.supplyId)
-    .orderBy(sql`quantity ASC`)
-    .limit(8)
-    .all();
-
-  const supplyIds = supplyAgg.map((row: { supplyId: string }) => row.supplyId);
-  const supplyRows = await db
-    .select({ id: supplies.id, name: supplies.name })
-    .from(supplies)
-    .where(inArray(supplies.id, supplyIds))
-    .all();
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
 
   return {
     geoJsonData,
     evacuees: {
-      total: totalEvacuees,
-      byGender: [
-        { name: "男性", value: maleCount, fill: "var(--chart-1)" },
-        { name: "女性", value: femaleCount, fill: "var(--chart-2)" },
-        { name: "その他", value: otherCount, fill: "var(--chart-3)" },
-      ],
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
     },
-    supplies: supplyAgg.map((item: { supplyId: string; quantity: number }) => ({
-      key: supplyRows.find((s: { id: string; name: string }) => s.id === item.supplyId)?.name || "",
-      value: 470000 - (item.quantity ?? 0),
-      fill: "var(--chart-2)",
-    })),
+    supplies: supplyShortages,
   };
 };
 
