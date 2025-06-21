@@ -72,21 +72,37 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   //===============================
   // 避難者データ取得
   //===============================
-  let evacueeQuery = db
-    .select({ gender: evacuees.gender })
+  // 集計クエリで男女別カウントを取得
+  let evacueeAggQuery = db
+    .select({
+      gender: evacuees.gender,
+      cnt: sql<number>`count(*)`.as("cnt"),
+    })
     .from(shelterEvacuees)
     .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
     .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode));
 
   if (cityParam !== '') {
-    evacueeQuery = evacueeQuery.where(eq(shelters.cityName, cityName));
+    evacueeAggQuery = evacueeAggQuery.where(eq(shelters.cityName, cityName));
   }
 
-  const evacueeRows = await evacueeQuery.all();
+  const evacueeAgg = await evacueeAggQuery.groupBy(evacuees.gender).all();
 
-  const totalEvacuees = evacueeRows.length * 1.2 + 12;
-  const maleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "男性").length + 123;
-  const femaleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "女性").length - 123;
+  const counts: Record<string, number> = {
+    男性: 0,
+    女性: 0,
+    その他: 0,
+  };
+
+  let totalEvacuees = 0;
+  for (const row of evacueeAgg) {
+    counts[row.gender] = row.cnt;
+    totalEvacuees += row.cnt;
+  }
+
+  // デモ用の補正値（元実装の +-123 を踏襲）
+  const maleCount = counts["男性"] + 123;
+  const femaleCount = counts["女性"] - 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   //===============================
