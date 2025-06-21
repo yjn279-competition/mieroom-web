@@ -49,62 +49,62 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   const cityParam = url.searchParams.get("cityParam") || '';
   const cityName = cityNameMap[cityParam] || cityParam;
 
-  // Drizzle DB (injected via Cloudflare Worker context)
+  // Drizzle DB
   const db = context.db;
   
-  // GeoJSON データの読み込み（R2 など外部ストレージから取得）
-  // Production (Cloudflare Workers) では `wrangler.jsonc` に定義した
-  // `TOKYO_GEOJSON_URL` から取得し、ローカル開発では `public/data` などから取得する
-  const remoteGeoJsonUrl = context.cloudflare?.env?.TOKYO_GEOJSON_URL as string | undefined;
-
+  // GeoJSON データの読み込み
   let geoJsonData: unknown;
-  if (remoteGeoJsonUrl) {
-    // 本番環境: R2 などに配置された公開 URL から取得
-    const response = await fetch(remoteGeoJsonUrl);
-    geoJsonData = await response.json();
+
+  if (context.bucket) {
+    // R2 バケットから直接取得
+    const obj = await context.bucket.get("tokyo.geojson");
+    if (!obj) {
+      throw new Response("GeoJSON not found in R2", { status: 404 });
+    }
+    geoJsonData = await obj.json();
   } else {
-    // ローカル開発環境: プロジェクト直下の public/data などから取得（存在しない場合はエラー）
+    // ローカル開発環境: public/data/tokyo.geojson から取得
     const localUrl = new URL("/data/tokyo.geojson", request.url);
     const response = await fetch(localUrl.href);
     geoJsonData = await response.json();
   }
   
-  // 避難者データの取得 (Drizzle)
-  // shelterCodes to filter
-  let shelterCodes: string[] = [];
-  if (cityParam === '') {
-    const rows = await db.select({ code: shelters.code }).from(shelters).all();
-    shelterCodes = rows.map((row: { code: string }) => row.code);
-  } else {
-    const rows = await db
-      .select({ code: shelters.code })
-      .from(shelters)
-      .where(eq(shelters.cityName, cityName))
-      .all();
-    shelterCodes = rows.map((row: { code: string }) => row.code);
-  }
-
-  // 全避難者を取得（性別も含めるため evacuees と join）
-  const evacueeRows = await db
+  //===============================
+  // 避難者データ取得
+  //===============================
+  let evacueeQuery = db
     .select({ gender: evacuees.gender })
     .from(shelterEvacuees)
-    .where(inArray(shelterEvacuees.shelterCode, shelterCodes))
     .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
-    .all();
+    .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode));
+
+  if (cityParam !== '') {
+    evacueeQuery = evacueeQuery.where(eq(shelters.cityName, cityName));
+  }
+
+  const evacueeRows = await evacueeQuery.all();
 
   const totalEvacuees = evacueeRows.length * 1.2 + 12;
   const maleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "男性").length + 123;
   const femaleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "女性").length - 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
-  // 物資データの取得 (Drizzle)
-  const supplyAgg = await db
+  //===============================
+  // 物資データ取得
+  //===============================
+  let supplyAggQuery = db
     .select({
       supplyId: shelterSupplies.supplyId,
       quantity: sql<number>`sum(${shelterSupplies.quantity})`.as("quantity"),
     })
     .from(shelterSupplies)
-    .where(inArray(shelterSupplies.shelterCode, shelterCodes))
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode));
+
+  if (cityParam !== '') {
+    supplyAggQuery = supplyAggQuery.where(eq(shelters.cityName, cityName));
+  }
+
+  const supplyAgg = await supplyAggQuery
     .groupBy(shelterSupplies.supplyId)
     .orderBy(sql`quantity ASC`)
     .limit(8)

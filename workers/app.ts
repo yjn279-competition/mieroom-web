@@ -9,6 +9,7 @@ declare module "react-router" {
       ctx: ExecutionContext;
     };
     db: DrizzleD1Database<typeof schema>;
+    bucket: R2Bucket;
   }
 }
 
@@ -24,6 +25,7 @@ export default {
     return requestHandler(request, {
       cloudflare: { env, ctx },
       db,
+      bucket: env.BUCKET,
     });
   },
 } satisfies ExportedHandler<Env>;
