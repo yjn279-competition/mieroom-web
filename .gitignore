@@ -1,16 +1,14 @@
-# JavaScript
+# TypeScript
 node_modules/
+*.tsbuildinfo
 
 # React Router
-/.cache
-/build
-.env
-.dev.vars
-.react-router/
+/.react-router/
+/build/
 
 # Cloudflare
+.mf
 .wrangler
-wrangler.jsonc
 
-# Misc
+# OS
 .DS_Store

@@ -1,0 +1,17 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "mieroom",
+	"compatibility_date": "2025-02-24",
+	"main": "./workers/app.ts",
+  "vars": {
+    "VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mieroom",
+      "database_id": "a6cba59c-62a3-40d7-b3d4-2c84ebb74a01",
+      "migrations_dir": "drizzle"
+    }
+  ]
+}
