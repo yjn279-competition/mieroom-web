@@ -7,7 +7,7 @@
 	"compatibility_date": "2025-02-24",
 	"main": "./workers/app.ts",
   "vars": {
-    "VALUE_FROM_CLOUDFLARE": "Hello from Cloudflare"
+    "TOKYO_GEOJSON_URL": "https://<your-account-id>.r2.dev/tokyo.geojson"
   },
   "d1_databases": [
     {

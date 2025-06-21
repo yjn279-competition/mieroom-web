@@ -52,10 +52,22 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   // Drizzle DB (injected via Cloudflare Worker context)
   const db = context.db;
   
-  // GeoJSONデータの読み込み
-  const geoJsonUrl = new URL("/public/data/tokyo.geojson", request.url);
-  const geoJsonResponse = await fetch(geoJsonUrl.href);
-  const geoJsonData = await geoJsonResponse.json();
+  // GeoJSON データの読み込み（R2 など外部ストレージから取得）
+  // Production (Cloudflare Workers) では `wrangler.jsonc` に定義した
+  // `TOKYO_GEOJSON_URL` から取得し、ローカル開発では `public/data` などから取得する
+  const remoteGeoJsonUrl = context.cloudflare?.env?.TOKYO_GEOJSON_URL as string | undefined;
+
+  let geoJsonData: unknown;
+  if (remoteGeoJsonUrl) {
+    // 本番環境: R2 などに配置された公開 URL から取得
+    const response = await fetch(remoteGeoJsonUrl);
+    geoJsonData = await response.json();
+  } else {
+    // ローカル開発環境: プロジェクト直下の public/data などから取得（存在しない場合はエラー）
+    const localUrl = new URL("/data/tokyo.geojson", request.url);
+    const response = await fetch(localUrl.href);
+    geoJsonData = await response.json();
+  }
   
   // 避難者データの取得 (Drizzle)
   // shelterCodes to filter
