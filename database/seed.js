@@ -1,6 +1,6 @@
 import fs from 'fs';
 import { faker } from '@faker-js/faker/locale/ja';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import util from 'util';
 import { exec } from 'child_process';
 
@@ -125,7 +125,7 @@ async function main() {
   console.log(`Generating shelter codes for ${sheltersData.length} shelters...`);
   const shelterCodes = new Map();
   sheltersData.forEach(shelter => {
-    const code = shelter['地方公共団体コード'] + '_' + uuidv4().substring(0, 8);
+    const code = shelter['地方公共団体コード'] + '_' + randomUUID().substring(0, 8);
     shelterCodes.set(JSON.stringify(shelter), code);
   });
   
@@ -176,7 +176,7 @@ async function main() {
   console.log(`Creating ${SUPPLIES.length} supply types...`);
   const supplyIds = SUPPLIES.map(supply => {
     return {
-      id: uuidv4(),
+      id: randomUUID(),
       ...supply
     };
   });

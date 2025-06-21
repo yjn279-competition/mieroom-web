@@ -2,8 +2,8 @@ import { ExternalLink } from "lucide-react"
 import { useState } from "react"
 import type { LoaderFunctionArgs } from "react-router";
 import { useParams, useLoaderData, Link } from "react-router";
-import { PrismaD1 } from "@prisma/adapter-d1"
-import { PrismaClient } from "@prisma/client"
+import { eq, sql, inArray } from "drizzle-orm";
+import * as schema from "~/database/schema";
 import { EvacueesChart } from "~/components/evacuees-chart"
 import { EvacueesTable } from "~/components/evacuees-table"
 import { SuppliesChart } from "~/components/supplies-chart"
@@ -45,10 +45,9 @@ const cityNameMap: Record<string, string> = {
 };
 
 export const loader = async ({ params, context }: LoaderFunctionArgs) => {
-  // DB接続情報
-  const { env } = context.cloudflare;
-  const adapter = new PrismaD1(env.DB);
-  const prisma = new PrismaClient({ adapter });
+  // Drizzle DB
+  const db = context.db;
+  const { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } = schema;
   
   // 区市町村名のマッピング
   const cityParam = params.city || '';
@@ -56,30 +55,51 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
   const cityName = cityNameMap[cityParam] || cityParam;
   
   // 避難所データの取得
-  const shelter = await prisma.shelter.findFirst({ where: { id: shelterId }});
+  const shelterRow = await db
+    .select()
+    .from(shelters)
+    .where(eq(shelters.code, shelterId))
+    .limit(1);
+  const shelter = shelterRow[0] ?? null;
   
   // 避難者データの取得
-  const evacuees = await prisma.evacuee.findMany({ where: { shelters: { some: { shelterId }}}});
-  const totalEvacuees = (await prisma.shelterEvacuee.count({ where: { shelterId }})) * 1.2 + 1;
-  const maleCount = (await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "男性" } } })) + 12;
-  const femaleCount = (await prisma.shelterEvacuee.count({ where: { shelterId, evacuee: { gender: "女性" } } })) - 12;
+  const evacueeJoinRows = await db
+    .select({
+      gender: evacuees.gender,
+      familyName: evacuees.familyName,
+      givenName: evacuees.givenName,
+      birthDate: evacuees.birthDate,
+      healthStatus: evacuees.healthStatus,
+    })
+    .from(evacuees)
+    .innerJoin(shelterEvacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+    .where(eq(shelterEvacuees.shelterCode, shelterId));
+
+  const totalEvacuees = evacueeJoinRows.length * 1.2 + 1;
+  const maleCount = evacueeJoinRows.filter((r: { gender: string }) => r.gender === "男性").length + 12;
+  const femaleCount = evacueeJoinRows.filter((r: { gender: string }) => r.gender === "女性").length - 12;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データを取得
-  const supplyRanking = await prisma.shelterSupply.groupBy({
-    by: 'supplyId',
-    _sum: { quantity: true },
-    where: { shelterId },
-    orderBy: { _sum: { quantity: 'asc' } },
-    take: 8,
-  });
+  const supplyAgg = await db
+    .select({
+      supplyId: shelterSupplies.supplyId,
+      quantity: sql<number>`sum(${shelterSupplies.quantity})`.as("quantity"),
+    })
+    .from(shelterSupplies)
+    .where(eq(shelterSupplies.shelterCode, shelterId))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(sql`quantity ASC`)
+    .limit(8);
 
-  const supplies = await prisma.supply.findMany({
-    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
-  })
+  const supplyIds = supplyAgg.map((row: { supplyId: string }) => row.supplyId);
+  const supplyRows = await db
+    .select({ id: supplies.id, name: supplies.name })
+    .from(supplies)
+    .where(inArray(supplies.id, supplyIds));
   
   // 避難者データをテーブル表示用に整形
-  const evacueeTableData = evacuees.map((evacuee) => {
+  const evacueeTableData = evacueeJoinRows.map((evacuee: { familyName: string; givenName: string; birthDate: string; gender: string; healthStatus: string | null; }) => {
     const birthDate = new Date(evacuee.birthDate);
     const today = new Date();
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -118,9 +138,9 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
       ],
       data: evacueeTableData
     },
-    supplies: supplyRanking.map((item) => ({
-      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: (supplyRanking[0]._sum.quantity ?? 0) + 100 - (item._sum.quantity ?? 0),
+    supplies: supplyAgg.map((item: { supplyId: string; quantity: number }) => ({
+      key: supplyRows.find((s: { id: string; name: string }) => s.id === item.supplyId)?.name || "",
+      value: (supplyAgg[0].quantity ?? 0) + 100 - (item.quantity ?? 0),
       fill: "var(--chart-2)",
     }))
   };

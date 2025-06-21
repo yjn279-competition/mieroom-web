@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
-import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
+import { eq, sql, inArray } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
 import { ClientOnly } from '~/components/client-only';
 import { EvacueesChart } from "~/components/evacuees-chart";
 import { SuppliesChart } from "~/components/supplies-chart";
@@ -49,34 +49,61 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
   const cityParam = url.searchParams.get("cityParam") || '';
   const cityName = cityNameMap[cityParam] || cityParam;
 
-  // DB接続情報
-  const { env } = context.cloudflare;
-  const adapter = new PrismaD1(env.DB);
-  const prisma = new PrismaClient({ adapter });
+  // Drizzle DB (injected via Cloudflare Worker context)
+  const db = context.db;
   
   // GeoJSONデータの読み込み
   const geoJsonUrl = new URL("/public/data/tokyo.geojson", request.url);
   const geoJsonResponse = await fetch(geoJsonUrl.href);
   const geoJsonData = await geoJsonResponse.json();
   
-  // 避難者データの取得
-  const whereCondition = cityParam === '' ? {} : { shelter: { cityName } };
-  const totalEvacuees = (await prisma.shelterEvacuee.count({ where: whereCondition })) * 1.2 + 12;
-  const maleCount = (await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "男性" } } })) + 123;
-  const femaleCount = (await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "女性" } } })) - 123;
+  // 避難者データの取得 (Drizzle)
+  // shelterCodes to filter
+  let shelterCodes: string[] = [];
+  if (cityParam === '') {
+    const rows = await db.select({ code: shelters.code }).from(shelters).all();
+    shelterCodes = rows.map((row: { code: string }) => row.code);
+  } else {
+    const rows = await db
+      .select({ code: shelters.code })
+      .from(shelters)
+      .where(eq(shelters.cityName, cityName))
+      .all();
+    shelterCodes = rows.map((row: { code: string }) => row.code);
+  }
+
+  // 全避難者を取得（性別も含めるため evacuees と join）
+  const evacueeRows = await db
+    .select({ gender: evacuees.gender })
+    .from(shelterEvacuees)
+    .where(inArray(shelterEvacuees.shelterCode, shelterCodes))
+    .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+    .all();
+
+  const totalEvacuees = evacueeRows.length * 1.2 + 12;
+  const maleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "男性").length + 123;
+  const femaleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "女性").length - 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
-  // 物資データの取得
-  const supplyRanking = await prisma.shelterSupply.groupBy({
-    by: 'supplyId',
-    _sum: { quantity: true },
-    orderBy: { _sum: { quantity: 'asc' } },
-    take: 8,
-  });
+  // 物資データの取得 (Drizzle)
+  const supplyAgg = await db
+    .select({
+      supplyId: shelterSupplies.supplyId,
+      quantity: sql<number>`sum(${shelterSupplies.quantity})`.as("quantity"),
+    })
+    .from(shelterSupplies)
+    .where(inArray(shelterSupplies.shelterCode, shelterCodes))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(sql`quantity ASC`)
+    .limit(8)
+    .all();
 
-  const supplies = await prisma.supply.findMany({
-    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
-  })
+  const supplyIds = supplyAgg.map((row: { supplyId: string }) => row.supplyId);
+  const supplyRows = await db
+    .select({ id: supplies.id, name: supplies.name })
+    .from(supplies)
+    .where(inArray(supplies.id, supplyIds))
+    .all();
 
   return {
     geoJsonData,
@@ -86,13 +113,13 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
         { name: "男性", value: maleCount, fill: "var(--chart-1)" },
         { name: "女性", value: femaleCount, fill: "var(--chart-2)" },
         { name: "その他", value: otherCount, fill: "var(--chart-3)" },
-      ]
+      ],
     },
-    supplies: supplyRanking.map((item) => ({
-      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: 470000 - (item._sum.quantity ?? 0),
+    supplies: supplyAgg.map((item: { supplyId: string; quantity: number }) => ({
+      key: supplyRows.find((s: { id: string; name: string }) => s.id === item.supplyId)?.name || "",
+      value: 470000 - (item.quantity ?? 0),
       fill: "var(--chart-2)",
-    }))
+    })),
   };
 };
 

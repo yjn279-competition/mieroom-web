@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { LoaderFunctionArgs } from "react-router";
 import { useParams, useLoaderData, Link } from "react-router";
-import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
-import { EvacueesChart, EvacueeGenderData } from "~/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "~/components/supplies-chart";
+import { eq, sql, inArray } from "drizzle-orm";
+import * as schema from "~/database/schema";
+import { EvacueesChart } from "~/components/evacuees-chart";
+import type { EvacueeGenderData } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
+import type { BarChartData } from "~/components/supplies-chart";
 import { ClientOnly } from '~/components/client-only';
 import { Card, CardContent } from "~/components/ui/card";
 import {
@@ -46,40 +48,58 @@ const cityNameMap: Record<string, string> = {
 };
 
 export const loader = async ({ params, context }: LoaderFunctionArgs) => {
-  // DB接続情報
-  const { env } = context.cloudflare;
-  const adapter = new PrismaD1(env.DB);
-  const prisma = new PrismaClient({ adapter });
+  // Drizzle DB (injected via workers/app.ts)
+  const db = context.db;
+  const { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } = schema;
   
   // 区市町村名のマッピング
   const cityParam = params.city || '';
   const cityName = cityNameMap[cityParam] || cityParam;
 
   // 避難所データの取得
-  const shelters = await prisma.shelter.findMany({ where: { cityName }});
-  const shelterIds = shelters.map((shelter) => shelter.id);
+  const shelterRows = await db
+    .select()
+    .from(shelters)
+    .where(eq(shelters.cityName, cityName))
+    .all();
+  const shelterIds = shelterRows.map((row: { code: string }) => row.code);
   
   // 避難者データの取得
-  const totalEvacuees = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds } }})) * 1.2;
-  const maleCount = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "男性" } } })) + 123;
-  const femaleCount = (await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "女性" } } })) + 123;
+  const evacueeRows = await db
+    .select({ gender: evacuees.gender })
+    .from(shelterEvacuees)
+    .where(inArray(shelterEvacuees.shelterCode, shelterIds))
+    .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+    .all();
+
+  const totalEvacuees = evacueeRows.length * 1.2;
+  const maleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "男性").length + 123;
+  const femaleCount = evacueeRows.filter((r: { gender: string }) => r.gender === "女性").length + 123;
   const otherCount = totalEvacuees - (maleCount + femaleCount);
   
   // 物資データの取得
-  const supplyRanking = await prisma.shelterSupply.groupBy({
-    by: 'supplyId',
-    _sum: { quantity: true },
-    where: { shelterId: { in: shelterIds } },
-    orderBy: { _sum: { quantity: 'asc' } },
-    take: 8,
-  });
+  const supplyAgg = await db
+    .select({
+      supplyId: shelterSupplies.supplyId,
+      quantity: sql<number>`sum(${shelterSupplies.quantity})`.as("quantity"),
+    })
+    .from(shelterSupplies)
+    .where(inArray(shelterSupplies.shelterCode, shelterIds))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(sql`quantity ASC`)
+    .limit(8)
+    .all();
 
-  const supplies = await prisma.supply.findMany({
-    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
-  })
-  
+  const supplyIds = supplyAgg.map((row: { supplyId: string }) => row.supplyId);
+
+  const supplyRows = await db
+    .select({ id: supplies.id, name: supplies.name })
+    .from(supplies)
+    .where(inArray(supplies.id, supplyIds))
+    .all();
+
   return {
-    shelters,
+    shelters: shelterRows.map((row: any) => ({ ...row, id: row.code })),
     cityName,
     evacuees: {
       total: totalEvacuees,
@@ -89,9 +109,9 @@ export const loader = async ({ params, context }: LoaderFunctionArgs) => {
         { name: "その他", value: otherCount, fill: "var(--chart-3)" },
       ]
     },
-    supplies: supplyRanking.map((item) => ({
-      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: (supplyRanking[0]._sum.quantity ?? 0) + 500 - (item._sum.quantity ?? 0),
+    supplies: supplyAgg.map((item: { supplyId: string; quantity: number }) => ({
+      key: supplyRows.find((s: { id: string; name: string }) => s.id === item.supplyId)?.name || "",
+      value: (supplyAgg[0].quantity ?? 0) + 500 - (item.quantity ?? 0),
       fill: "var(--chart-2)",
     }))
   };

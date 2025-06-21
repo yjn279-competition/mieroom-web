@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "mieroom",
-      "database_id": "a6cba59c-62a3-40d7-b3d4-2c84ebb74a01",
+      "database_id": "a4b0f488-20c7-45be-8529-1bbf2ad3bee4",
       "migrations_dir": "drizzle"
     }
   ]
