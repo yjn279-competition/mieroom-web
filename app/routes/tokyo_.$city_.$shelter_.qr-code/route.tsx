@@ -85,7 +85,8 @@ export default function QRCodePage() {
           <p className="text-lg">このQRコードを避難者に提示して、受付を行ってください。</p>
         </div>
         <div className="grid gap-4 items-center justify-items-center">
-          <div className="bg-white p-8 rounded-xl shadow-xl">
+          {/* bg-white */}
+          <div className="p-8 rounded-xl shadow-xl">
             {qrValue && (
               <QRCodeSVG
                 value={`${qrValue}`}
