@@ -42,15 +42,15 @@ export function EvacueesChart({
     },
     "男性": {
       label: "男性",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     "女性": {
       label: "女性",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     "その他": {
       label: "その他",
-      color: "hsl(var(--chart-3))",
+      color: "var(--chart-3)",
     },
   } satisfies ChartConfig
 

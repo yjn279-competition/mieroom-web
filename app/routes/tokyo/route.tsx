@@ -83,15 +83,15 @@ export const loader = async ({ context, request }: LoaderFunctionArgs) => {
     evacuees: {
       total: totalEvacuees,
       byGender: [
-        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
-        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" },
+        { name: "男性", value: maleCount, fill: "var(--chart-1)" },
+        { name: "女性", value: femaleCount, fill: "var(--chart-2)" },
+        { name: "その他", value: otherCount, fill: "var(--chart-3)" },
       ]
     },
     supplies: supplyRanking.map((item) => ({
       key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
       value: 470000 - (item._sum.quantity ?? 0),
-      fill: "hsl(var(--chart-2))",
+      fill: "var(--chart-2)",
     }))
   };
 };
