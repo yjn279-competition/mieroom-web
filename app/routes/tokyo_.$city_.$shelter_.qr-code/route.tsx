@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useLoaderData, Link } from "react-router";
 import type { LoaderFunction } from "react-router";
 import { QRCodeSVG } from "qrcode.react";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "crypto";
 import type { Shelter } from "../tokyo_.$city/route";
 import { Button } from "~/components/ui/button";
 
@@ -62,7 +62,7 @@ export const loader: LoaderFunction = async ({ params, request }): Promise<Loade
 // セキュアなトークンを生成する関数
 const generateSecureToken = (shelterId: string): string => {
   const timestamp = Date.now();  // 現在のタイムスタンプを取得
-  const uuid = uuidv4();  // UUIDを生成
+  const uuid = randomUUID();  // UUIDを生成
   
   return `${shelterId}-${timestamp}-${uuid}`;
 }

@@ -20,6 +20,9 @@
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-scroll-area": "^1.2.9",
     "@radix-ui/react-slot": "^1.2.3",
+    "@react-router/fs-routes": "^7.6.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "drizzle-orm": "~0.36.4",
     "isbot": "^5.1.28",
     "leaflet": "^1.9.4",
@@ -47,7 +50,6 @@
     "drizzle-kit": "~0.28.1",
     "tailwindcss": "^4.1.10",
     "typescript": "^5.8.3",
-    "uuid": "^11.1.0",
     "vite-tsconfig-paths": "^5.1.4",
     "wrangler": "^4.20.5"
   },
