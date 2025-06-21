@@ -1,9 +1,9 @@
 import L from 'leaflet';
 import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, GeoJSON } from 'react-leaflet';
+import { GeoJSON, MapContainer } from 'react-leaflet';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from "@remix-run/react";
+import { useNavigate, useSearchParams } from "@remix-run/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from '@remix-run/react';
@@ -68,19 +68,23 @@ interface HoveredCity {
 }
 
 export function TokyoMap({ geoJsonData }: TokyoMapProps) {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [hoveredCity, setHoveredCity] = useState<HoveredCity | null>(null);
+  const [city, setCity] = useState(searchParams.get('cityParam') || '');
+
+  console.log(city)
 
   // 背景色のカスタマイズ
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.textContent = mapContainerStyle;
-    document.head.appendChild(styleElement);
+  // useEffect(() => {
+  //   const styleElement = document.createElement('style');
+  //   styleElement.textContent = mapContainerStyle;
+  //   document.head.appendChild(styleElement);
 
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
+  //   return () => {
+  //     document.head.removeChild(styleElement);
+  //   };
+  // }, []);
 
   // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
@@ -109,11 +113,15 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
             const cityName = feature.properties.N03_004;
             const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
 
-            const currentCityParam = searchParams.get('cityParam') || '';
-            if (currentCityParam === cityParam) {
-              searchParams.delete('cityParam');
+            const currentCityParam = searchParams.get('cityParam');
+            console.log('currentCityParam:', city);
+            console.log('cityParam:', cityParam);
+            if (city === cityParam) {
+              setCity('');
+              navigate('/tokyo');
             } else {
-              setSearchParams({ cityParam });
+              setCity(cityParam);
+              navigate(`/tokyo?cityParam=${cityParam}`);
             }
           }
         },

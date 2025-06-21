@@ -86,7 +86,7 @@ async function main() {
   
   // Read shelters data
   console.log('Reading shelters data...');
-  const sheltersData = JSON.parse(fs.readFileSync('data/shelters.json', 'utf8'));
+  const sheltersData = JSON.parse(fs.readFileSync('public/data/shelters.json', 'utf8'));
   
   // Extract unique cities
   console.log('Extracting unique cities...');
