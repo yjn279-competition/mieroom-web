@@ -4,7 +4,7 @@ import type { LoaderFunction } from "react-router";
 import { QRCodeSVG } from "qrcode.react";
 import { v4 as uuidv4 } from "uuid";
 import type { Shelter } from "../tokyo_.$city/route";
-import { Button } from "@/components/ui/button";
+import { Button } from "~/components/ui/button";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {

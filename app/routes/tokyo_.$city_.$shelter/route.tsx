@@ -4,9 +4,9 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useParams, useLoaderData, Link } from "react-router";
 import { PrismaD1 } from "@prisma/adapter-d1"
 import { PrismaClient } from "@prisma/client"
-import { EvacueesChart } from "@/components/evacuees-chart"
-import { EvacueesTable } from "@/components/evacuees-table"
-import { SuppliesChart } from "@/components/supplies-chart"
+import { EvacueesChart } from "~/components/evacuees-chart"
+import { EvacueesTable } from "~/components/evacuees-table"
+import { SuppliesChart } from "~/components/supplies-chart"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,8 +14,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
+} from "~/components/ui/breadcrumb"
+import { Button } from "~/components/ui/button"
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {

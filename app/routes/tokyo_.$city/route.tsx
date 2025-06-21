@@ -3,10 +3,10 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useParams, useLoaderData, Link } from "react-router";
 import { PrismaD1 } from "@prisma/adapter-d1";
 import { PrismaClient } from "@prisma/client";
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { ClientOnly } from '@/components/client-only';
-import { Card, CardContent } from "@/components/ui/card";
+import { EvacueesChart, EvacueeGenderData } from "~/components/evacuees-chart";
+import { SuppliesChart, BarChartData } from "~/components/supplies-chart";
+import { ClientOnly } from '~/components/client-only';
+import { Card, CardContent } from "~/components/ui/card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,8 +14,8 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from '@/components/ui/button';
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
 import { CityMap } from "./cityMap.client";
 
 // Map of city name in URL to city name in JSON

@@ -3,16 +3,16 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { PrismaD1 } from "@prisma/adapter-d1";
 import { PrismaClient } from "@prisma/client";
-import { ClientOnly } from '@/components/client-only';
-import { EvacueesChart } from "@/components/evacuees-chart";
-import { SuppliesChart } from "@/components/supplies-chart";
+import { ClientOnly } from '~/components/client-only';
+import { EvacueesChart } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Button } from '@/components/ui/button';
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
 import { Link } from "react-router";
 import { TokyoMap } from "./tokyoMap.client";
 
