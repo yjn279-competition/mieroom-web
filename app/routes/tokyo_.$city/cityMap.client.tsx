@@ -2,11 +2,10 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import { useLoaderData, Link, useParams } from 'react-router';
-import { loader } from "./route";
 
 // Define the Shelter type based on the data structure
 export interface Shelter {
-  id: string;
+  code: string;
   name: string;
   address: string;
   latitude: number;
@@ -100,7 +99,7 @@ export function CityMap() {
                 </ul>
               </div>
               <div className="mt-3">
-                <Link to={`/tokyo/${params.city}/${shelter.id}`}>
+                <Link to={`/tokyo/${params.city}/${shelter.code}`}>
                   ダッシュボードを表示
                 </Link>
               </div>

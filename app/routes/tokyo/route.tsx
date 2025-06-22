@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLoaderData } from "react-router";
-import { eq, sql, inArray, asc } from "drizzle-orm";
+import { eq, sql, asc } from "drizzle-orm";
 import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
 import { ClientOnly } from '~/components/client-only';
 import { EvacueesChart } from "~/components/evacuees-chart";
@@ -48,9 +48,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const cityParam = url.searchParams.get("cityParam") || '';
   const cityName = cityNameMap[cityParam] || cityParam;
-
-  // DB接続情報
-  const db = context.db;
   
   // GeoJSON データの読み込み
   const object = await context.bucket.get("tokyo.geojson");
@@ -60,11 +57,11 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const geoJsonData = await object.json();
   
   // 避難者データの取得
-  const genderCounts = await db
+  const genderCounts = await context.db
     .select({
       name: evacuees.gender,
       value: sql`count(*)`.mapWith(Number),
-      fill: sql`case 
+      fill: sql`case
         when ${evacuees.gender} = '男性' then 'var(--chart-1)'
         when ${evacuees.gender} = '女性' then 'var(--chart-2)'
         else 'var(--chart-3)'
@@ -77,7 +74,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     .groupBy(evacuees.gender);
   
   // 物資データの取得
-  const supplyShortages = await db
+  const supplyShortages = await context.db
     .select({
       key: supplies.name,
       value: sql`470000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
@@ -101,7 +98,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   };
 };
 
-export default function Prefecture() {
+export default function PrefectureDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const { geoJsonData, evacuees, supplies } = useLoaderData<typeof loader>();
 
