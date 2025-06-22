@@ -11,4 +11,23 @@ export default defineConfig({
     reactRouter(),
     tsconfigPaths(),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          leaflet: ['leaflet', 'react-leaflet'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+    sourcemap: false,
+  },
+  server: {
+    fs: {
+      allow: ['..'],
+    },
+  },
+  optimizeDeps: {
+    include: ['leaflet', 'react-leaflet'],
+  },
 });
