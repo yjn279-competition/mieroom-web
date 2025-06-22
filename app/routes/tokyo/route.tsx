@@ -1,19 +1,19 @@
 import { useState } from 'react';
-import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { useLoaderData } from "@remix-run/react";
-import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
-import { ClientOnly } from '@/components/client-only';
-import { EvacueesChart } from "@/components/evacuees-chart";
-import { SuppliesChart } from "@/components/supplies-chart";
+import { useLoaderData } from "react-router";
+import { eq, sql, asc } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
+import { ClientOnly } from '~/components/client-only';
+import { EvacueesChart } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbList,
   BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Button } from '@/components/ui/button';
-import { Link } from '@remix-run/react';
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
+import { Link } from "react-router";
+import type { Route } from "./+types/route";
 import { TokyoMap } from "./tokyoMap.client";
 
 // Map of city name in URL to city name in JSON
@@ -43,60 +43,62 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+export async function loader({ context, request }: Route.LoaderArgs) {
   // パラメータ取得
   const url = new URL(request.url);
   const cityParam = url.searchParams.get("cityParam") || '';
   const cityName = cityNameMap[cityParam] || cityParam;
-
-  // DB接続情報
-  const { env } = context.cloudflare;
-  const adapter = new PrismaD1(env.DB);
-  const prisma = new PrismaClient({ adapter });
   
-  // GeoJSONデータの読み込み
-  const geoJsonUrl = new URL("/public/data/tokyo.geojson", request.url);
-  const geoJsonResponse = await fetch(geoJsonUrl.href);
-  const geoJsonData = await geoJsonResponse.json();
+  // GeoJSON データの読み込み
+  const object = await context.bucket.get("tokyo.geojson");
+  if (!object) {
+    throw new Response("GeoJSON not found in R2", { status: 404 });
+  }
+  const geoJsonData = await object.json();
   
   // 避難者データの取得
-  const whereCondition = cityParam === '' ? {} : { shelter: { cityName } };
-  const totalEvacuees = await prisma.shelterEvacuee.count({ where: whereCondition }) * 1.2 + 12;
-  const maleCount = await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "男性" } } }) + 123;
-  const femaleCount = await prisma.shelterEvacuee.count({ where: { ...whereCondition, evacuee: { gender: "女性" } } }) - 123;
-  const otherCount = totalEvacuees - (maleCount + femaleCount);
+  const genderCounts = await context.db
+    .select({
+      name: evacuees.gender,
+      value: sql`count(*)`.mapWith(Number),
+      fill: sql`case
+        when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+        when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+        else 'var(--chart-3)'
+      end`.mapWith(String),
+    })
+    .from(shelterEvacuees)
+    .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
+    .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
+    .groupBy(evacuees.gender);
   
   // 物資データの取得
-  const supplyRanking = await prisma.shelterSupply.groupBy({
-    by: 'supplyId',
-    _sum: { quantity: true },
-    orderBy: { _sum: { quantity: 'asc' } },
-    take: 8,
-  });
-
-  const supplies = await prisma.supply.findMany({
-    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
-  })
+  const supplyShortages = await context.db
+    .select({
+      key: supplies.name,
+      value: sql`470000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
+    })
+    .from(shelterSupplies)
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
 
   return {
     geoJsonData,
     evacuees: {
-      total: totalEvacuees,
-      byGender: [
-        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
-        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" },
-      ]
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
     },
-    supplies: supplyRanking.map((item) => ({
-      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: 470000 - (item._sum.quantity ?? 0),
-      fill: "hsl(var(--chart-2))",
-    }))
+    supplies: supplyShortages,
   };
 };
 
-export default function Prefecture() {
+export default function PrefectureDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const { geoJsonData, evacuees, supplies } = useLoaderData<typeof loader>();
 

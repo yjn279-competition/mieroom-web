@@ -2,11 +2,11 @@ import L from 'leaflet';
 import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { GeoJSON, MapContainer } from 'react-leaflet';
-import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from "@remix-run/react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Link } from '@remix-run/react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Link } from 'react-router';
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -73,18 +73,16 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
   const [hoveredCity, setHoveredCity] = useState<HoveredCity | null>(null);
   const [city, setCity] = useState(searchParams.get('cityParam') || '');
 
-  console.log(city)
-
   // 背景色のカスタマイズ
-  // useEffect(() => {
-  //   const styleElement = document.createElement('style');
-  //   styleElement.textContent = mapContainerStyle;
-  //   document.head.appendChild(styleElement);
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = mapContainerStyle;
+    document.head.appendChild(styleElement);
 
-  //   return () => {
-  //     document.head.removeChild(styleElement);
-  //   };
-  // }, []);
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
@@ -135,7 +133,7 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
   return (
     <Card className="relative h-full">
       {cityName && (
-        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
           <h3 className="font-bold text-3xl">{cityName}</h3>
           <Button asChild variant="secondary">
             <Link to={`/tokyo/${cityParam}`}>ダッシュボードを表示する</Link>
@@ -143,7 +141,7 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
         </div>
       )}
       {cityName === '' && hoveredCity && (
-        <div className="absolute top-0 left-0 z-[10000] p-8 flex items-center gap-4">
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
           <h3 className="font-bold text-3xl">{hoveredCity.name}</h3>
         </div>
       )}

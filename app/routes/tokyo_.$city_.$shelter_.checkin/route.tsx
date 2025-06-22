@@ -11,7 +11,7 @@ const Dashboard = () => {
         return `${firstDigit}${remainingDigits}`;
     };
     
-    const generateRandomFamilyIDs = (count) => {
+    const generateRandomFamilyIDs = (count: number) => {
         const familyIDs = [];
         for (let i = 0; i < count; i++) {
             familyIDs.push(generateRandomMyNumberID()); // 生成したIDを追加
@@ -52,8 +52,8 @@ const Dashboard = () => {
             const data = await getResponse.json();
             console.log('GET Response Data:', data);
 
-            setAllDeviceInfo(data);  
-            setLatestInfo(data[0]);  
+            setAllDeviceInfo(data as any[]);  
+            setLatestInfo((data as any[])[0]);  
             setIsSent(true);  // 送信後に画面を切り替える
         } catch (error) {
             console.error('エラー:', error);
@@ -135,7 +135,7 @@ export default Dashboard;
 const styles = {
     dashboard: {
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column' as const,
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px',
@@ -159,7 +159,7 @@ const styles = {
         cursor: 'pointer',
     },
     header: {
-        textAlign: 'center',
+        textAlign: 'center' as const,
         marginBottom: '20px',
     },
     blueText: {
@@ -170,7 +170,7 @@ const styles = {
         maxWidth: '1200px',
         padding: '20px',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column' as const,
         alignItems: 'center',  // 横方向に中央揃え
         justifyContent: 'center',  // 縦方向に中央揃え
     },

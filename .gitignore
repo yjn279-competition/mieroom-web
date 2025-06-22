@@ -1,15 +1,15 @@
-# JavaScript
-node_modules
+# TypeScript
+node_modules/
+*.tsbuildinfo
 
-# Remix
-/.cache
-/build
+# React Router
+/.react-router/
+/build/
 .env
-.dev.vars
 
 # Cloudflare
+.mf
 .wrangler
-wrangler.jsonc
 
-# Misc
+# OS
 .DS_Store

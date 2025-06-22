@@ -27,6 +27,12 @@ rye sync
 pnpm wrangler d1 migrations apply mieroom --local
 pnpm seed
 pnpx prisma generate
+
+# Create local storage
+pnpm wrangler r2 bucket create mieroom
+pnpm wrangler r2 object get mieroom/tokyo.geojson --remote
+pnpm wrangler r2 object put mieroom/tokyo.geojson --file tokyo.geojson
+rm tokyo.geojson
 ```
 
 ### Front-End

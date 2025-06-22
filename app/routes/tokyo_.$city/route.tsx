@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import type { LoaderFunctionArgs } from "@remix-run/cloudflare";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
-import { PrismaD1 } from "@prisma/adapter-d1";
-import { PrismaClient } from "@prisma/client";
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { ClientOnly } from '@/components/client-only';
-import { Card, CardContent } from "@/components/ui/card";
+import { useLoaderData, Link } from "react-router";
+import { eq, sql, asc } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
+import { EvacueesChart } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
+import { ClientOnly } from '~/components/client-only';
+import { Card, CardContent } from "~/components/ui/card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,9 +13,10 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Button } from '@/components/ui/button';
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
 import { CityMap } from "./cityMap.client";
+import type { Route } from "./+types/route";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -45,66 +45,64 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader = async ({ params, context }: LoaderFunctionArgs) => {
-  // DB接続情報
-  const { env } = context.cloudflare;
-  const adapter = new PrismaD1(env.DB);
-  const prisma = new PrismaClient({ adapter });
-  
+export async function loader({ params, context }: Route.LoaderArgs) {
   // 区市町村名のマッピング
   const cityParam = params.city || '';
   const cityName = cityNameMap[cityParam] || cityParam;
 
   // 避難所データの取得
-  const shelters = await prisma.shelter.findMany({ where: { cityName }});
-  const shelterIds = shelters.map((shelter) => shelter.id);
-  
+  const shelterRows = await context.db
+    .select()
+    .from(shelters)
+    .where(eq(shelters.cityName, cityName));
+
   // 避難者データの取得
-  const totalEvacuees = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds } }}) * 1.2;
-  const maleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "男性" } } }) + 123;
-  const femaleCount = await prisma.shelterEvacuee.count({ where: { shelterId: { in: shelterIds }, evacuee: { gender: "女性" } } }) + 123;
-  const otherCount = totalEvacuees - (maleCount + femaleCount);
+  const genderCounts = await context.db
+  .select({
+    name: evacuees.gender,
+    value: sql`count(*)`.mapWith(Number),
+    fill: sql`case 
+      when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+      when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+      else 'var(--chart-3)'
+    end`.mapWith(String),
+  })
+  .from(shelterEvacuees)
+  .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
+  .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+  .where(eq(shelters.cityName, cityName))
+  .groupBy(evacuees.gender);
   
   // 物資データの取得
-  const supplyRanking = await prisma.shelterSupply.groupBy({
-    by: 'supplyId',
-    _sum: { quantity: true },
-    where: { shelterId: { in: shelterIds } },
-    orderBy: { _sum: { quantity: 'asc' } },
-    take: 8,
-  });
+  const supplyShortages = await context.db
+    .select({
+      key: supplies.name,
+      value: sql`17000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
+    })
+    .from(shelterSupplies)
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(eq(shelters.cityName, cityName))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
 
-  const supplies = await prisma.supply.findMany({
-    where: { id: { in: supplyRanking.map((item) => item.supplyId)} }
-  })
-  
   return {
-    shelters,
+    shelters: shelterRows,
     cityName,
     evacuees: {
-      total: totalEvacuees,
-      byGender: [
-        { name: "男性", value: maleCount, fill: "hsl(var(--chart-1))" },
-        { name: "女性", value: femaleCount, fill: "hsl(var(--chart-2))" },
-        { name: "その他", value: otherCount, fill: "hsl(var(--chart-3))" },
-      ]
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
     },
-    supplies: supplyRanking.map((item) => ({
-      key: supplies.find((supply) => supply.id === item.supplyId)?.name || "",
-      value: (supplyRanking[0]._sum.quantity ?? 0) + 500 - (item._sum.quantity ?? 0),
-      fill: "hsl(var(--chart-2))",
-    }))
+    supplies: supplyShortages,
   };
 };
 
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
-  const params = useParams();
-  const { shelters, cityName, evacuees, supplies } = useLoaderData<typeof loader>();
+  const { cityName, evacuees, supplies } = useLoaderData<typeof loader>();
   
-  console.log("Evacuees data:", evacuees);
-  console.log("Evacuees by gender:", evacuees.byGender);
-
   return (
     <div className="w-full p-8">
       <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">

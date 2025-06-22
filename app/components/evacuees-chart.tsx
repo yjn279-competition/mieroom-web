@@ -5,15 +5,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "~/components/ui/card"
 import {
-  ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+  type ChartConfig,
+} from "~/components/ui/chart"
 
 export interface EvacueeGenderData {
   name: string
@@ -42,15 +42,15 @@ export function EvacueesChart({
     },
     "男性": {
       label: "男性",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     "女性": {
       label: "女性",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     "その他": {
       label: "その他",
-      color: "hsl(var(--chart-3))",
+      color: "var(--chart-3)",
     },
   } satisfies ChartConfig
 
@@ -72,7 +72,7 @@ export function EvacueesChart({
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[15rem]"
+          className="mx-auto aspect-square max-h-60"
         >
           <PieChart>
             <ChartTooltip

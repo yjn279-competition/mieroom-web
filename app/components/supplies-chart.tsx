@@ -5,13 +5,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "~/components/ui/card"
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+  type ChartConfig,
+} from "~/components/ui/chart"
 
 export interface BarChartData {
   [key: string]: string | number | undefined
@@ -32,13 +32,13 @@ export function SuppliesChart({
   const chartConfig = {
     value: {
       label: "不足数",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
   } satisfies ChartConfig
 
   return (
     <Card className="h-full">
-      <CardHeader className="flex flex-row space-x-2 space-y-0 pb-3">
+      <CardHeader className="flex flex-row space-x-2 space-y-0">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>

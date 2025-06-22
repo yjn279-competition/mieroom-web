@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
+import { useParams, useLoaderData, Link } from "react-router";
+import type { LoaderFunction } from "react-router";
 import { QRCodeSVG } from "qrcode.react";
-import { v4 as uuidv4 } from "uuid";
-import type { Shelter } from "../tokyo_.$city/route";
-import { Button } from "@/components/ui/button";
+import { Button } from "~/components/ui/button";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -62,10 +60,16 @@ export const loader: LoaderFunction = async ({ params, request }): Promise<Loade
 // セキュアなトークンを生成する関数
 const generateSecureToken = (shelterId: string): string => {
   const timestamp = Date.now();  // 現在のタイムスタンプを取得
-  const uuid = uuidv4();  // UUIDを生成
+  const uuid = crypto.randomUUID();  // UUIDを生成
   
   return `${shelterId}-${timestamp}-${uuid}`;
 }
+
+type Shelter = {
+  [key: string]: unknown;
+  "指定市区町村名": string;
+  "避難所_施設名称": string;
+};
 
 export default function QRCodePage() {
   const { shelter } = useLoaderData<LoaderData>();
@@ -85,7 +89,8 @@ export default function QRCodePage() {
           <p className="text-lg">このQRコードを避難者に提示して、受付を行ってください。</p>
         </div>
         <div className="grid gap-4 items-center justify-items-center">
-          <div className="bg-white p-8 rounded-xl shadow-xl">
+          {/* bg-white */}
+          <div className="p-8 rounded-xl shadow-xl">
             {qrValue && (
               <QRCodeSVG
                 value={`${qrValue}`}
