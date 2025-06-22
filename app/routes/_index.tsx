@@ -1,5 +1,9 @@
 import { redirect } from "react-router";
 
-export const loader = async () => {
+export async function loader() {
   return redirect("/tokyo");
+}
+
+export default function Index() {
+  return null;
 }
