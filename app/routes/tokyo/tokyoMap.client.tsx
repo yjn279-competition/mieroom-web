@@ -2,7 +2,7 @@ import L from 'leaflet';
 import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { GeoJSON, MapContainer } from 'react-leaflet';
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -73,18 +73,16 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
   const [hoveredCity, setHoveredCity] = useState<HoveredCity | null>(null);
   const [city, setCity] = useState(searchParams.get('cityParam') || '');
 
-  console.log(city)
-
   // 背景色のカスタマイズ
-  // useEffect(() => {
-  //   const styleElement = document.createElement('style');
-  //   styleElement.textContent = mapContainerStyle;
-  //   document.head.appendChild(styleElement);
+  useEffect(() => {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = mapContainerStyle;
+    document.head.appendChild(styleElement);
 
-  //   return () => {
-  //     document.head.removeChild(styleElement);
-  //   };
-  // }, []);
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
