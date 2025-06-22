@@ -5,9 +5,12 @@
     "app/**/*",
     "app/**/.server/**/*",
     "app/**/.client/**/*",
-    "database/**/*",
+    "database/schema.ts",
     "workers/**/*",
     "worker-configuration.d.ts"
+  ],
+  "exclude": [
+    "database/seed.mjs"
   ],
   "compilerOptions": {
     "composite": true,
