@@ -1,17 +1,17 @@
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "~/components/ui/card"
 import {
-  ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+  type ChartConfig,
+} from "~/components/ui/chart"
 
 export interface BarChartData {
   [key: string]: string | number | undefined
@@ -26,39 +26,63 @@ export interface SuppliesChartProps {
 
 export function SuppliesChart({
   title = "物資不足状況",
-  description,
+  description = "物資の不足ランキングと不足物資数",
   data
 }: SuppliesChartProps) {
   const chartConfig = {
-    shortage: {
+    value: {
       label: "不足数",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
   } satisfies ChartConfig
 
   return (
     <Card className="h-full">
-      <CardHeader>
+      <CardHeader className="flex flex-row space-x-2 space-y-0">
         <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
-          <BarChart accessibilityLayer data={data} layout="vertical">
-            <CartesianGrid vertical={true} />
-            <XAxis type="number" />
+          <BarChart
+            accessibilityLayer
+            data={data}
+            layout="vertical"
+            margin={{ right: 16 }}
+          >
+            <CartesianGrid horizontal={false} />
             <YAxis
+              dataKey="key"
               type="category"
-              dataKey="item"
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              hide
             />
-            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+            <XAxis dataKey="value" type="number" hide />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent indicator="line" />} />
             <Bar
-              dataKey="shortage"
-              radius={[0, 4, 4, 0]}
-            />
+              dataKey="value"
+              layout="vertical"
+              radius={4}
+            >
+              <LabelList
+                dataKey="key"
+                position="insideLeft"
+                offset={8}
+                className="fill-white"
+                fontSize={12}
+              />
+              <LabelList
+                dataKey="value"
+                position="right"
+                offset={8}
+                className="fill-black"
+                fontSize={12}
+              />
+            </Bar>
           </BarChart>
         </ChartContainer>
       </CardContent>

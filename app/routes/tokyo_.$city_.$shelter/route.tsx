@@ -1,10 +1,11 @@
+import { ExternalLink } from "lucide-react"
 import { useState } from "react"
-import { useParams, useLoaderData, Link } from "@remix-run/react"
-import type { LoaderFunction } from "@remix-run/node"
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart"
-import { EvacueesTable, EvacueeData } from "@/components/evacuees-table"
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart"
-import type { Shelter } from "../tokyo_.$city/route"
+import { useParams, useLoaderData, Link } from "react-router";
+import { eq, sql, asc, getTableColumns } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
+import { EvacueesChart } from "~/components/evacuees-chart"
+import { EvacueesTable } from "~/components/evacuees-table"
+import { SuppliesChart } from "~/components/supplies-chart"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -12,25 +13,9 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
-};
-
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
+} from "~/components/ui/breadcrumb"
+import { Button } from "~/components/ui/button"
+import type { Route } from "./+types/route";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -59,161 +44,194 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader: LoaderFunction = async ({ params, request }) => {
+export async function loader({ params, context }: Route.LoaderArgs) {
+  // 区市町村名のマッピング
   const cityParam = params.city || '';
-  const shelterIndex = parseInt(params.shelter || '0', 10);
-  const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
+  const shelterId = params.shelter || '0';
+  const cityName = cityNameMap[cityParam] || cityParam;
   
-  // 避難所データの読み込み
-  const sheltersUrl = new URL("/data/shelters.json", request.url);
-  const sheltersResponse = await fetch(sheltersUrl.href);
-  const shelters = await sheltersResponse.json();
+  // 避難所データの取得
+  const shelterRow = await context.db
+    .select()
+    .from(shelters)
+    .where(eq(shelters.code, shelterId))
+    .limit(1);
+  const shelter = shelterRow[0] ?? null;
   
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const allEvacuees = await evacueeResponse.json();
+  // 避難者リストの取得
+  const evacueeList = await context.db
+  .select({ ...getTableColumns(evacuees) })
+  .from(evacuees)
+  .innerJoin(shelterEvacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+  .where(eq(shelterEvacuees.shelterCode, shelterId));
+
+  // 避難者データの取得
+  const genderCounts = await context.db
+  .select({
+    name: evacuees.gender,
+    value: sql`count(*)`.mapWith(Number),
+    fill: sql`case 
+      when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+      when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+      else 'var(--chart-3)'
+    end`.mapWith(String),
+  })
+  .from(shelterEvacuees)
+  .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
+  .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+  .where(eq(shelters.code, shelterId))
+  .groupBy(evacuees.gender);
   
-  // 物資データの読み込み
-  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
-  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
-  const allMaterialsDetail = await materialsDetailResponse.json();
-  
-  // 避難所を市区町村でフィルタリング
-  const filteredShelters = shelters.filter(
-    (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
-  );
-  
-  // 特定の避難所を取得
-  const selectedShelter = filteredShelters[shelterIndex] || null;
-  
-  if (!selectedShelter) {
-    return { 
-      shelter: null,
-      cityNameInJapanese,
-      evacuees: {
-        total: 0,
-        byGender: [],
-        data: []
-      },
-      supplies: []
-    };
-  }
-  
-  // 避難所コードを生成
-  const shelterCode = `S${selectedShelter.地方公共団体コード.toString()}-00${shelterIndex + 1}`;
-  
-  // 避難者を避難所でフィルタリング
-  const filteredEvacuees = allEvacuees.filter((evacuee: any) => 
-    evacuee.shelter_code === shelterCode
-  );
-  
-  // 物資を避難所でフィルタリング
-  const filteredMaterials = allMaterialsDetail.filter((material: any) => 
-    material.shelter_code === shelterCode
-  );
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  filteredEvacuees.forEach((evacuee: any) => {
-    if (evacuee.gender in genderCounts) {
-      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
-    }
-  });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "食料": 0,
-    "水": 0,
-    "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
-  };
-  
-  filteredMaterials.forEach((material: any) => {
-    const genre = material.genre;
-    if (genre in genreMapping) {
-      const mappedGenre = genreMapping[genre];
-      if (mappedGenre in suppliesShortage) {
-        // 物資の不足状況を計算（例：必要量 - 現在量）
-        // ここでは単純に各ジャンルの合計を集計
-        suppliesShortage[mappedGenre] += 50; // 仮の必要量
-      }
-    }
-  });
+  // 物資データの取得
+  const supplyShortages = await context.db
+    .select({
+      key: supplies.name,
+      value: sql`200 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
+    })
+    .from(shelterSupplies)
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(eq(shelters.code, shelterId))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
   
   // 避難者データをテーブル表示用に整形
-  const evacueeTableData = filteredEvacuees.map((evacuee: any) => ({
-    name: evacuee.name,
-    age: evacuee.age,
-    gender: evacuee.gender,
-    status: evacuee.status,
-    elapsedTime: '2:30', // 仮のデータ
-    plannedTime: '2:00'  // 仮のデータ
-  }));
-  
+  const evacueeTableData = evacueeList.map((evacuee) => {
+    const birthDate = new Date(evacuee.birthDate);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    // 健康状態を日本語に変換
+    let status = "無事";
+    if (evacuee.healthStatus === "要注意") {
+      status = "軽傷";
+    } else if (evacuee.healthStatus === "要治療") {
+      status = "重体";
+    }
+    
+    return {
+      name: `${evacuee.familyName} ${evacuee.givenName}`,
+      age,
+      gender: evacuee.gender === "M" ? "男性" : evacuee.gender === "F" ? "女性" : "その他",
+      status,
+      elapsedTime: `${Math.floor(Math.random() * 48)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`,
+      plannedTime: `${Math.floor(Math.random() * 48)}:${Math.floor(Math.random() * 60).toString().padStart(2, '0')}`
+    };
+  });
+
   return { 
-    shelter: selectedShelter,
-    cityNameInJapanese,
+    shelter,
+    cityName,
     evacuees: {
-      total: filteredEvacuees.length,
-      byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
-        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
-        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
-      ],
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
       data: evacueeTableData
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
-    }))
+    supplies: supplyShortages,
   };
 };
 
 export default function ShelterDashboard() {
-  const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null)
-  const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null)
-  const params = useParams()
-  const { shelter, cityNameInJapanese, evacuees, supplies } = useLoaderData<typeof loader>()
+  const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
+  const [status, setStatus] = useState<"無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null>(null);
+  const [sortKey, setSortKey] = useState<string>("name");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+  const params = useParams();
+  
+  const { shelter, cityName, evacuees, supplies } = useLoaderData<typeof loader>();
   
   // 避難所名を取得
-  const shelterName = shelter ? shelter['避難所_施設名称'] : "避難所"
+  const shelterName = shelter ? shelter.name : "避難所"
+  
+  // ソート関数
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      // 同じカラムをクリックした場合は昇順/降順を切り替え
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      // 異なるカラムをクリックした場合は新しいカラムで昇順にソート
+      setSortKey(key);
+      setSortDirection("asc");
+    }
+  };
+  
+  // データのソート
+  const sortedData = [...evacuees.data].sort((a, b) => {
+    // TypeScriptエラーを回避するためにインデックスシグネチャを持つ型として扱う
+    const aRecord = a as Record<string, string | number>;
+    const bRecord = b as Record<string, string | number>;
+    
+    const valueA = aRecord[sortKey];
+    const valueB = bRecord[sortKey];
+    
+    // 文字列か数値かによってソート方法を変える
+    if (typeof valueA === "string" && typeof valueB === "string") {
+      return sortDirection === "asc" 
+        ? valueA.localeCompare(valueB, "ja") 
+        : valueB.localeCompare(valueA, "ja");
+    } else {
+      // 数値の場合
+      return sortDirection === "asc" 
+        ? (valueA as number) - (valueB as number) 
+        : (valueB as number) - (valueA as number);
+    }
+  });
 
   return (
     <div className="w-full p-8">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink className="text-2xl font-bold" asChild>
-              <Link to="/tokyo">東京都</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbLink className="text-2xl font-bold" asChild>
-              <Link to={`/tokyo/${params.city}`}>{cityNameInJapanese}</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-2xl font-bold">{shelterName} ダッシュボード</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
+      <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to="/tokyo">東京都</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to={`/tokyo/${params.city}`}>{cityName}</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">{shelterName} ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+        <div className="ml-auto flex items-center mr-1">
+          <Button asChild>
+            <Link to="qr-code" target="_blank" rel="noopener noreferrer">
+              受付QRコードを表示する
+              <ExternalLink className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
       <div className="flex gap-4 h-[calc(100vh-7rem)]">
         <div className="basis-8/12 h-full">
           <EvacueesTable 
             title={`避難者一覧`}
-            data={evacuees.data}
+            data={sortedData}
             gender={gender} 
-            status={status} 
+            status={status}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            onSort={handleSort}
           />
         </div>
         <div className="flex flex-col basis-4/12 gap-4 h-full">

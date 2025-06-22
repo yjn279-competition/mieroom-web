@@ -1,119 +1,127 @@
 import { useState } from 'react';
-import type { LoaderFunction } from "@remix-run/node";
-import { ClientOnly } from '@/components/client-only';
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { TokyoMap } from "./tokyoMap.client";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData } from "react-router";
+import { eq, sql, asc } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
+import { ClientOnly } from '~/components/client-only';
+import { EvacueesChart } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
+import { Link } from "react-router";
+import type { Route } from "./+types/route";
+import { TokyoMap } from "./tokyoMap.client";
 
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
+// Map of city name in URL to city name in JSON
+const cityNameMap: Record<string, string> = {
+  'chiyoda': '千代田区',
+  'chuo': '中央区',
+  'minato': '港区',
+  'shinjuku': '新宿区',
+  'bunkyo': '文京区',
+  'taito': '台東区',
+  'sumida': '墨田区',
+  'koto': '江東区',
+  'shinagawa': '品川区',
+  'meguro': '目黒区',
+  'ota': '大田区',
+  'setagaya': '世田谷区',
+  'shibuya': '渋谷区',
+  'nakano': '中野区',
+  'suginami': '杉並区',
+  'toshima': '豊島区',
+  'kita': '北区',
+  'arakawa': '荒川区',
+  'itabashi': '板橋区',
+  'nerima': '練馬区',
+  'adachi': '足立区',
+  'katsushika': '葛飾区',
+  'edogawa': '江戸川区',
 };
 
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
+export async function loader({ context, request }: Route.LoaderArgs) {
+  // パラメータ取得
+  const url = new URL(request.url);
+  const cityParam = url.searchParams.get("cityParam") || '';
+  const cityName = cityNameMap[cityParam] || cityParam;
+  
+  // GeoJSON データの読み込み
+  const object = await context.bucket.get("tokyo.geojson");
+  if (!object) {
+    throw new Response("GeoJSON not found in R2", { status: 404 });
+  }
+  const geoJsonData = await object.json();
+  
+  // 避難者データの取得
+  const genderCounts = await context.db
+    .select({
+      name: evacuees.gender,
+      value: sql`count(*)`.mapWith(Number),
+      fill: sql`case
+        when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+        when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+        else 'var(--chart-3)'
+      end`.mapWith(String),
+    })
+    .from(shelterEvacuees)
+    .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
+    .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
+    .groupBy(evacuees.gender);
+  
+  // 物資データの取得
+  const supplyShortages = await context.db
+    .select({
+      key: supplies.name,
+      value: sql`470000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
+    })
+    .from(shelterSupplies)
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(cityName ? eq(shelters.cityName, cityName) : undefined)
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
 
-export const loader: LoaderFunction = async ({ request }) => {
-  // GeoJSONデータの読み込み
-  const geoJsonUrl = new URL("/data/tokyo.geojson", request.url);
-  const geoJsonResponse = await fetch(geoJsonUrl.href);
-  const geoJsonData = await geoJsonResponse.json();
-  
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const evacuees = await evacueeResponse.json();
-  
-  // 物資データの読み込み
-  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
-  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
-  const materialsDetail = await materialsDetailResponse.json();
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  evacuees.forEach((evacuee: any) => {
-    if (evacuee.gender in genderCounts) {
-      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
-    }
-  });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "食料": 0,
-    "水": 0,
-    "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
-  };
-  
-  materialsDetail.forEach((material: any) => {
-    const genre = material.genre;
-    if (genre in genreMapping) {
-      const mappedGenre = genreMapping[genre];
-      if (mappedGenre in suppliesShortage) {
-        // 物資の不足状況を計算（例：必要量 - 現在量）
-        // ここでは単純に各ジャンルの合計を集計
-        suppliesShortage[mappedGenre] += 100; // 仮の必要量
-      }
-    }
-  });
-  
   return {
     geoJsonData,
     evacuees: {
-      total: evacuees.length,
-      byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
-        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
-        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
-      ]
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
-    }))
+    supplies: supplyShortages,
   };
 };
 
-export default function Prefecture() {
+export default function PrefectureDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
   const { geoJsonData, evacuees, supplies } = useLoaderData<typeof loader>();
 
   return (
     <div className="w-full p-8">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-2xl font-bold">東京都</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="flex gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">東京都 ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex gap-4 h-[calc(100vh-9rem)]">
         <div className="basis-8/12 h-full">
           <div className="h-full">
             <ClientOnly>

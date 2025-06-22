@@ -1,9 +1,40 @@
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import { useLoaderData, Link, useParams } from "@remix-run/react";
-import { loader } from "./route";
-import type { Shelter } from "./route";
+import { useLoaderData, Link, useParams } from 'react-router';
+
+// Define the Shelter type based on the data structure
+export interface Shelter {
+  code: string;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  elevatorInfo?: string;
+  slope?: string;
+  brailleBlocks?: string;
+  wheelchairToilet?: string;
+  otherFacilities?: string;
+}
+
+// Define the LoaderData type based on the loader's return structure
+interface LoaderData {
+  shelters: Shelter[];
+  cityName: string;
+  evacuees: {
+    total: number;
+    byGender: Array<{
+      name: string;
+      value: number;
+      fill: string;
+    }>;
+  };
+  supplies: Array<{
+    key: string;
+    value: number;
+    fill: string;
+  }>;
+}
 
 // Default center for Tokyo
 const defaultCenter: [number, number] = [35.6895, 139.6917];
@@ -20,14 +51,15 @@ const customIcon = new L.Icon({
 });
 
 export function CityMap() {
-  const { shelters } = useLoaderData<typeof loader>();
+  const data = useLoaderData<LoaderData>();
+  const shelters = data.shelters;
   const params = useParams();
   
   // Calculate center based on shelters if available
   const center = shelters && shelters.length > 0
     ? [
-        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.緯度, 0) / shelters.length,
-        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.経度, 0) / shelters.length
+        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.latitude, 0) / shelters.length,
+        shelters.reduce((sum: number, shelter: Shelter) => sum + shelter.longitude, 0) / shelters.length
       ] as [number, number]
     : defaultCenter;
 
@@ -43,8 +75,8 @@ export function CityMap() {
       />
       {shelters && shelters.map((shelter: Shelter, index: number) => (
         <Marker 
-          key={`${shelter.避難所_施設名称}-${index}`}
-          position={[shelter.緯度, shelter.経度]}
+          key={`${shelter.name}-${index}`}
+          position={[shelter.latitude, shelter.longitude]}
           icon={customIcon}
           eventHandlers={{
             mouseover: (e) => {
@@ -54,20 +86,20 @@ export function CityMap() {
         >
           <Popup autoPan={false}>
             <div>
-              <h3 className="font-bold">{shelter.避難所_施設名称}</h3>
-              <p>{shelter.所在地住所}</p>
+              <h3 className="font-bold">{shelter.name}</h3>
+              <p>{shelter.address}</p>
               <div className="mt-2">
                 <p className="text-sm">バリアフリー設備:</p>
                 <ul className="text-sm list-disc pl-5">
-                  {shelter["エレベーター有/避難スペースが１階"] === "○" && <li>エレベーター有/避難スペースが１階</li>}
-                  {shelter.スロープ等 === "○" && <li>スロープ等</li>}
-                  {shelter.点字ブロック === "○" && <li>点字ブロック</li>}
-                  {shelter.車椅子使用者対応トイレ === "○" && <li>車椅子使用者対応トイレ</li>}
-                  {shelter.その他 && <li>{shelter.その他}</li>}
+                  {shelter.elevatorInfo === "○" && <li>エレベーター有/避難スペースが１階</li>}
+                  {shelter.slope === "○" && <li>スロープ等</li>}
+                  {shelter.brailleBlocks === "○" && <li>点字ブロック</li>}
+                  {shelter.wheelchairToilet === "○" && <li>車椅子使用者対応トイレ</li>}
+                  {shelter.otherFacilities && <li>{shelter.otherFacilities}</li>}
                 </ul>
               </div>
               <div className="mt-3">
-                <Link to={`/tokyo/${params.city}/${index}`}>
+                <Link to={`/tokyo/${params.city}/${shelter.code}`}>
                   ダッシュボードを表示
                 </Link>
               </div>

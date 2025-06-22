@@ -1,16 +1,11 @@
 import { useState } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { EvacueesChart, EvacueeGenderData } from "@/components/evacuees-chart";
-import { SuppliesChart, BarChartData } from "@/components/supplies-chart";
-import { useParams, useLoaderData, Link } from "@remix-run/react";
-import type { LoaderFunction } from "@remix-run/node";
-import { ClientOnly } from '@/components/client-only';
-import { CityMap } from "./cityMap.client";
+import { useLoaderData, Link } from "react-router";
+import { eq, sql, asc } from "drizzle-orm";
+import { shelters, shelterEvacuees, evacuees, shelterSupplies, supplies } from "~/database/schema";
+import { EvacueesChart } from "~/components/evacuees-chart";
+import { SuppliesChart } from "~/components/supplies-chart";
+import { ClientOnly } from '~/components/client-only';
+import { Card, CardContent } from "~/components/ui/card";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,41 +13,10 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-
-// 物資ジャンルのマッピング
-const genreMapping: Record<string, string> = {
-  "食料": "食料",
-  "水": "水",
-  "衛生用品": "衛生用品",
-  "寝具": "毛布",
-  "医薬品": "医薬品",
-};
-
-// チャートの色設定
-const chartColors = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-];
-
-// 避難所の型定義
-export type Shelter = {
-  避難所_施設名称: string;
-  地方公共団体コード: number;
-  都道府県: string;
-  指定市区町村名: string;
-  所在地住所: string;
-  緯度: number;
-  経度: number;
-  "エレベーター有/避難スペースが１階": string | null;
-  スロープ等: string | null;
-  点字ブロック: string | null;
-  車椅子使用者対応トイレ: string | null;
-  その他: string | null;
-};
+} from "~/components/ui/breadcrumb";
+import { Button } from '~/components/ui/button';
+import { CityMap } from "./cityMap.client";
+import type { Route } from "./+types/route";
 
 // Map of city name in URL to city name in JSON
 const cityNameMap: Record<string, string> = {
@@ -81,122 +45,90 @@ const cityNameMap: Record<string, string> = {
   'edogawa': '江戸川区',
 };
 
-export const loader: LoaderFunction = async ({ params, request }) => {
+export async function loader({ params, context }: Route.LoaderArgs) {
+  // 区市町村名のマッピング
   const cityParam = params.city || '';
-  const cityNameInJapanese = cityNameMap[cityParam] || cityParam;
+  const cityName = cityNameMap[cityParam] || cityParam;
+
+  // 避難所データの取得
+  const shelterRows = await context.db
+    .select()
+    .from(shelters)
+    .where(eq(shelters.cityName, cityName));
+
+  // 避難者データの取得
+  const genderCounts = await context.db
+  .select({
+    name: evacuees.gender,
+    value: sql`count(*)`.mapWith(Number),
+    fill: sql`case 
+      when ${evacuees.gender} = '男性' then 'var(--chart-1)'
+      when ${evacuees.gender} = '女性' then 'var(--chart-2)'
+      else 'var(--chart-3)'
+    end`.mapWith(String),
+  })
+  .from(shelterEvacuees)
+  .innerJoin(shelters, eq(shelters.code, shelterEvacuees.shelterCode))
+  .innerJoin(evacuees, eq(evacuees.myNumber, shelterEvacuees.myNumber))
+  .where(eq(shelters.cityName, cityName))
+  .groupBy(evacuees.gender);
   
-  // 避難所データの読み込み
-  const sheltersUrl = new URL("/data/shelters.json", request.url);
-  const sheltersResponse = await fetch(sheltersUrl.href);
-  const shelters = await sheltersResponse.json();
-  
-  // 避難者データの読み込み
-  const evacueeUrl = new URL("/data/json/evacuees.json", request.url);
-  const evacueeResponse = await fetch(evacueeUrl.href);
-  const allEvacuees = await evacueeResponse.json();
-  
-  // 物資データの読み込み
-  const materialsDetailUrl = new URL("/data/json/materials_detail.json", request.url);
-  const materialsDetailResponse = await fetch(materialsDetailUrl.href);
-  const allMaterialsDetail = await materialsDetailResponse.json();
-  
-  // 避難所を市区町村でフィルタリング
-  const filteredShelters = shelters.filter(
-    (shelter: Shelter) => shelter.指定市区町村名 === cityNameInJapanese
-  );
-  
-  // 避難所コードのリストを作成
-  const shelterCodes = filteredShelters.map((shelter: Shelter) => {
-    // 避難所コードを生成（例：S{地方公共団体コード}-{連番}）
-    const cityCode = shelter.地方公共団体コード.toString();
-    return `S${cityCode}-001`; // 実際のコードに合わせて調整が必要
-  });
-  
-  // 避難者を市区町村の避難所でフィルタリング
-  const filteredEvacuees = allEvacuees.filter((evacuee: any) => 
-    shelterCodes.some((code: string) => evacuee.shelter_code.startsWith(code.substring(0, 7)))
-  );
-  
-  // 物資を市区町村の避難所でフィルタリング
-  const filteredMaterials = allMaterialsDetail.filter((material: any) => 
-    shelterCodes.some((code: string) => material.shelter_code.startsWith(code.substring(0, 7)))
-  );
-  
-  // 避難者の性別ごとの集計
-  const genderCounts = {
-    "男性": 0,
-    "女性": 0,
-    "その他": 0
-  };
-  
-  filteredEvacuees.forEach((evacuee: any) => {
-    if (evacuee.gender in genderCounts) {
-      genderCounts[evacuee.gender as keyof typeof genderCounts]++;
-    }
-  });
-  
-  // 物資の不足状況を集計
-  const suppliesShortage: Record<string, number> = {
-    "食料": 0,
-    "水": 0,
-    "衛生用品": 0,
-    "毛布": 0,
-    "医薬品": 0
-  };
-  
-  filteredMaterials.forEach((material: any) => {
-    const genre = material.genre;
-    if (genre in genreMapping) {
-      const mappedGenre = genreMapping[genre];
-      if (mappedGenre in suppliesShortage) {
-        // 物資の不足状況を計算（例：必要量 - 現在量）
-        // ここでは単純に各ジャンルの合計を集計
-        suppliesShortage[mappedGenre] += 80; // 仮の必要量
-      }
-    }
-  });
-  
+  // 物資データの取得
+  const supplyShortages = await context.db
+    .select({
+      key: supplies.name,
+      value: sql`17000 - sum(${shelterSupplies.quantity})`.mapWith(Number),
+      fill: sql`'var(--chart-2)'`.mapWith(String),
+    })
+    .from(shelterSupplies)
+    .innerJoin(shelters, eq(shelters.code, shelterSupplies.shelterCode))
+    .innerJoin(supplies, eq(supplies.id, shelterSupplies.supplyId))
+    .where(eq(shelters.cityName, cityName))
+    .groupBy(shelterSupplies.supplyId)
+    .orderBy(asc(shelterSupplies.quantity))
+    .limit(8);
+
   return {
-    shelters: filteredShelters,
-    cityNameInJapanese,
+    shelters: shelterRows,
+    cityName,
     evacuees: {
-      total: filteredEvacuees.length,
-      byGender: [
-        { name: "男性", value: genderCounts["男性"], fill: "var(--color-男性)" },
-        { name: "女性", value: genderCounts["女性"], fill: "var(--color-女性)" },
-        { name: "その他", value: genderCounts["その他"], fill: "var(--color-その他)" }
-      ]
+      total: genderCounts.reduce((acc, gender) => acc + gender.value, 0),
+      byGender: genderCounts,
     },
-    supplies: Object.entries(suppliesShortage).map(([item, shortage], index) => ({
-      item,
-      shortage,
-      fill: chartColors[index % chartColors.length]
-    }))
+    supplies: supplyShortages,
   };
 };
 
 export default function CityDashboard() {
   const [gender, setGender] = useState<"男性" | "女性" | "その他" | null>(null);
-  const params = useParams();
-  const { shelters, cityNameInJapanese, evacuees, supplies } = useLoaderData<typeof loader>();
-  const cityName = cityNameInJapanese || params.city || "世田谷区";
-
+  const { cityName, evacuees, supplies } = useLoaderData<typeof loader>();
+  
   return (
     <div className="w-full p-8">
-      <Breadcrumb className="mb-4">
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink className="text-2xl font-bold" asChild>
-              <Link to="/tokyo">東京都</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage className="text-2xl font-bold">{cityName} ダッシュボード</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-      <div className="flex gap-4 h-[calc(100vh-7rem)]">
+      <div className="flex flex-row bg-orange-200 rounded-xl p-2 mb-4">
+        <Button
+          className="h-full rounded-lg p-2 mr-2 text-2xl font-bold tracking-wide"
+          asChild
+        >
+          <Link to="/tokyo">
+            mieroom
+          </Link>
+        </Button>
+        <Breadcrumb className="p-2">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink className="text-2xl font-bold" asChild>
+                <Link to="/tokyo">東京都</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage className="text-2xl font-bold">{cityName} ダッシュボード</BreadcrumbPage>
+            </BreadcrumbItem>
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex gap-4 h-[calc(100vh-9rem)]">
         <div className="basis-8/12 h-full">
           <Card className="h-full">
             <CardContent className="h-full p-0">

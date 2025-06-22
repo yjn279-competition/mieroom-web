@@ -1,10 +1,12 @@
 import L from 'leaflet';
 import type { PathOptions } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { MapContainer, GeoJSON } from 'react-leaflet';
-import { useEffect } from 'react';
-import { Link } from "@remix-run/react";
-import { Card, CardContent } from "@/components/ui/card";
+import { GeoJSON, MapContainer } from 'react-leaflet';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
+import { Button } from "~/components/ui/button";
+import { Card, CardContent } from "~/components/ui/card";
+import { Link } from 'react-router';
 
 // Map of city name in Japanese to URL parameter
 const cityNameMap: Record<string, string> = {
@@ -46,10 +48,9 @@ const defaultStyle: PathOptions = {
 };
 
 const focusedStyle: PathOptions = {
-  fillColor: '#F97316',
+  fillColor: '#FB923C',
   fillOpacity: 1,
 };
-
 
 const mapContainerStyle = `
   .leaflet-container {
@@ -57,12 +58,20 @@ const mapContainerStyle = `
   }
 `;
 
-
 interface TokyoMapProps {
   geoJsonData: any;
 }
 
+interface HoveredCity {
+  name: string;
+  param: string;
+}
+
 export function TokyoMap({ geoJsonData }: TokyoMapProps) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [hoveredCity, setHoveredCity] = useState<HoveredCity | null>(null);
+  const [city, setCity] = useState(searchParams.get('cityParam') || '');
 
   // 背景色のカスタマイズ
   useEffect(() => {
@@ -77,44 +86,65 @@ export function TokyoMap({ geoJsonData }: TokyoMapProps) {
 
   // Event handlers for GeoJSON features
   const onEachFeature = (feature: any, layer: L.Layer) => {
-    if (feature.properties && feature.properties.N03_004) {
-      // Get city name and parameter
-      const cityName = feature.properties.N03_004;
-      const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
-      
-      // ポップアップにリンクを追加
-      const popupContent = `
-        <div>
-          <h3 class="font-bold">${cityName}</h3>
-          <div class="mt-3">
-            <a href="/tokyo/${cityParam}">
-              ダッシュボードを表示
-            </a>
-          </div>
-        </div>
-      `;
-      
-      // Bind popup to layer
-      layer.bindPopup(popupContent);
+    if (!feature.properties || !feature.properties.N03_004) {
+      return null;
     }
-    
+
     if (layer instanceof L.Path) {
       layer.on({
         mouseover: (e) => {
           const layer = e.target;
           layer.setStyle(focusedStyle);
-          layer.openPopup(); // Open popup on hover
+          const cityName = feature.properties.N03_004;
+          const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+          setHoveredCity({ name: cityName, param: cityParam });
         },
         mouseout: (e) => {
           const layer = e.target;
           layer.setStyle(defaultStyle);
+          setHoveredCity(null);
+        },
+        click: (e) => {
+          const layer = e.target;
+          const feature = layer.feature;
+          if (feature && feature.properties && feature.properties.N03_004) {
+            const cityName = feature.properties.N03_004;
+            const cityParam = Object.entries(cityNameMap).find(([_, value]) => value === cityName)?.[0] || '';
+
+            const currentCityParam = searchParams.get('cityParam');
+            console.log('currentCityParam:', city);
+            console.log('cityParam:', cityParam);
+            if (city === cityParam) {
+              setCity('');
+              navigate('/tokyo');
+            } else {
+              setCity(cityParam);
+              navigate(`/tokyo?cityParam=${cityParam}`);
+            }
+          }
         },
       });
     }
   };
 
+  const cityParam = searchParams.get("cityParam") || '';
+  const cityName = cityNameMap[cityParam] || cityParam;
+
   return (
-    <Card className="h-full">
+    <Card className="relative h-full">
+      {cityName && (
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
+          <h3 className="font-bold text-3xl">{cityName}</h3>
+          <Button asChild variant="secondary">
+            <Link to={`/tokyo/${cityParam}`}>ダッシュボードを表示する</Link>
+          </Button>
+        </div>
+      )}
+      {cityName === '' && hoveredCity && (
+        <div className="absolute top-0 left-0 z-10000 p-8 flex items-center gap-4">
+          <h3 className="font-bold text-3xl">{hoveredCity.name}</h3>
+        </div>
+      )}
       <CardContent className="h-full p-0">
         <MapContainer
           center={center}

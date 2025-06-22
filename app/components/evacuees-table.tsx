@@ -1,10 +1,12 @@
+import { useState } from "react"
+import { ChevronDown, ChevronUp, Filter } from "lucide-react"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "~/components/ui/card"
 import {
   Table,
   TableBody,
@@ -12,7 +14,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "~/components/ui/table"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
+import { Input } from "~/components/ui/input"
+import { Button } from "~/components/ui/button"
 
 export interface TableColumn {
   key: string
@@ -20,6 +29,8 @@ export interface TableColumn {
   align?: "left" | "center" | "right"
   width?: string
   formatter?: (value: any) => React.ReactNode
+  sortable?: boolean
+  filterable?: boolean
 }
 
 export interface EvacueeData {
@@ -40,6 +51,9 @@ export interface EvacueesTableProps {
   status: "無事" | "軽傷" | "重体" | "死亡" | "行方不明" | null
   columns?: TableColumn[]
   maxHeight?: string
+  sortKey?: string
+  sortDirection?: "asc" | "desc"
+  onSort?: (key: string) => void
 }
 
 export function EvacueesTable({
@@ -49,19 +63,33 @@ export function EvacueesTable({
   gender,
   status,
   columns = [
-    { key: "name", header: "氏名", width: "100px" },
-    { key: "age", header: "年齢", align: "center" },
-    { key: "gender", header: "性別", align: "center" },
-    { key: "status", header: "状態", align: "center" },
-    { key: "elapsedTime", header: "外出時間", align: "right" },
+    { key: "name", header: "氏名", width: "100px", sortable: true, filterable: true },
+    { key: "age", header: "年齢", align: "center", sortable: true, filterable: true },
+    { key: "gender", header: "性別", align: "center", sortable: true, filterable: true },
+    { key: "status", header: "状態", align: "center", sortable: true, filterable: true },
+    { key: "elapsedTime", header: "外出時間", align: "right", sortable: true, filterable: true },
   ],
-  maxHeight = "calc(100vh - 12rem)"
+  maxHeight = "calc(100vh - 12rem)",
+  sortKey,
+  sortDirection = "asc",
+  onSort
 }: EvacueesTableProps) {
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>({});
+  
   const filteredData = data.filter((person) => {
-    if (gender && person.gender !== gender) return false
-    if (status && person.status !== status) return false
-    return true
-  })
+    // 性別と状態のフィルタリング
+    if (gender && person.gender !== gender) return false;
+    if (status && person.status !== status) return false;
+    
+    // 各カラムのフィルタリング
+    for (const [key, filterValue] of Object.entries(columnFilters)) {
+      if (filterValue && String(person[key]).toLowerCase().indexOf(filterValue.toLowerCase()) === -1) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   return (
     <Card className="h-full flex flex-col">
@@ -77,12 +105,74 @@ export function EvacueesTable({
                 {columns.map((column) => (
                   <TableHead
                     key={column.key}
-                    className={column.width ? `w-[${column.width}]` : ""}
+                    className={`${column.width ? `w-[${column.width}]` : ""} relative`}
                     style={{
                       textAlign: column.align || "left",
                     }}
                   >
-                    {column.header}
+                    <div className="flex items-center gap-1">
+                      {column.sortable && onSort ? (
+                        <button
+                          onClick={() => onSort(column.key)}
+                          className="flex items-center gap-1 hover:text-primary"
+                        >
+                          {column.header}
+                          {sortKey === column.key && (
+                            sortDirection === "asc" ? 
+                              <ChevronUp className="h-4 w-4" /> : 
+                              <ChevronDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      ) : (
+                        column.header
+                      )}
+                      
+                      {column.filterable && (
+                        <Popover>
+                          <PopoverTrigger>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 hover:bg-muted">
+                              <Filter className="h-3 w-3" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-60 p-2">
+                            <div className="space-y-2">
+                              <h4 className="font-medium text-sm">{column.header}でフィルタ</h4>
+                              <Input
+                                placeholder="フィルタ..."
+                                value={columnFilters[column.key] || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                                  setColumnFilters({
+                                    ...columnFilters,
+                                    [column.key]: e.target.value
+                                  });
+                                }}
+                              />
+                              <div className="flex justify-between">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    const newFilters = {...columnFilters};
+                                    delete newFilters[column.key];
+                                    setColumnFilters(newFilters);
+                                  }}
+                                >
+                                  クリア
+                                </Button>
+                                <Button 
+                                  size="sm"
+                                  onClick={() => {
+                                    // ポップオーバーを閉じる（実装によっては不要）
+                                  }}
+                                >
+                                  適用
+                                </Button>
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
                   </TableHead>
                 ))}
               </TableRow>

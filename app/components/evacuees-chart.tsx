@@ -5,15 +5,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "~/components/ui/card"
 import {
-  ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@/components/ui/chart"
+  type ChartConfig,
+} from "~/components/ui/chart"
 
 export interface EvacueeGenderData {
   name: string
@@ -42,15 +42,15 @@ export function EvacueesChart({
     },
     "男性": {
       label: "男性",
-      color: "hsl(var(--chart-1))",
+      color: "var(--chart-1)",
     },
     "女性": {
       label: "女性",
-      color: "hsl(var(--chart-2))",
+      color: "var(--chart-2)",
     },
     "その他": {
       label: "その他",
-      color: "hsl(var(--chart-3))",
+      color: "var(--chart-3)",
     },
   } satisfies ChartConfig
 
@@ -65,14 +65,14 @@ export function EvacueesChart({
 
   return (
     <Card className="h-full">
-      <CardHeader className="items-center pb-0">
+      <CardHeader className="flex flex-row space-x-2 space-y-0 pb-0">
         <CardTitle>{title}</CardTitle>
-        {description && <CardDescription>{description}</CardDescription>}
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[15rem]"
+          className="mx-auto aspect-square max-h-60"
         >
           <PieChart>
             <ChartTooltip
@@ -102,9 +102,9 @@ export function EvacueesChart({
                         <tspan
                           x={viewBox.cx}
                           y={viewBox.cy}
-                          className="fill-foreground text-3xl font-bold"
+                          className="fill-foreground text-2xl font-bold"
                         >
-                          {totalEvacuees}
+                          {totalEvacuees.toLocaleString()}
                         </tspan>
                         <tspan
                           x={viewBox.cx}
